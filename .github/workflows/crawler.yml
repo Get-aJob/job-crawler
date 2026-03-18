@@ -24,5 +24,5 @@ jobs:
       - name: 크롤러 실행
         run: npx ts-node src/crawler/main.ts
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_PROJECT_URL: ${{ secrets.SUPABASE_PROJECT_URL }}
+          SUPABASE_SERVICE_ROLE_API_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_API_KEY }}

@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.2",
+    "axios": "^1.13.6",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "node-cron": "^4.2.1",
+    "node.js": "^0.0.1-security"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "start": "ts-node src/crawler/main.ts"
+  }
+}

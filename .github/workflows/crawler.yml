@@ -29,7 +29,7 @@ jobs:
         run: npm run build
 
       - name: 크롤러 실행
-        run: node dist/crawler/main.js
+        run: node dist/src/crawler/main.js
         env:
           SUPABASE_PROJECT_URL: ${{ secrets.SUPABASE_PROJECT_URL }}
           SUPABASE_SERVICE_ROLE_API_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_API_KEY }}

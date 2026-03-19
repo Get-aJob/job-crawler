@@ -6,6 +6,15 @@ export const mapToJobPosting = (
   source: string,
   userId: string
 ): JobPostingInsert => {
+  const contentParts: string[] = [];
+
+  if (job.requirements) {
+    contentParts.push(`[지원자격]\n${job.requirements}`);
+  }
+
+  if (job.preferred) {
+    contentParts.push(`[우대사항]\n${job.preferred}`);
+  }
   return {
     created_by: userId,
 
@@ -17,12 +26,16 @@ export const mapToJobPosting = (
     title: job.title,
     company_name: job.company,
 
-    content: JSON.stringify({
-      location: job.location,
-      experience: job.experience,
-    }),
+    location: job.location,
+    experience: job.experience,
+
+    content: contentParts.length > 0
+      ? contentParts.join("\n\n")
+      : null,
 
     deadline: parseDeadline(job.deadline),
+    deadline_text: job.deadline,
+
     crawled_at: new Date().toISOString(),
   };
 };

@@ -6,6 +6,9 @@ export type CrawledJob = {
   experience: string;
   deadline: string;
   url: string;
+
+  requirements?: string;
+  preferred?: string;
 };
 
 export type JobPostingInsert = {
@@ -18,7 +21,13 @@ export type JobPostingInsert = {
   title: string;
   company_name: string;
 
+  location: string;
+  experience: string;
+
   content: string | null;
+
   deadline: string | null;
+  deadline_text: string | null;
+
   crawled_at: string;
 };

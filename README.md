@@ -1,5 +1,7 @@
 # job-crawler
+
 공고 사이트에서 공고를 크롤링하는 서비스입니다.
+
 # Job Crawler 구축 및 배포 가이드
 
 이 문서는 **채용 공고 크롤러를 개발하고, Supabase에 저장하며, GitHub Actions로 자동 스케줄링하는 전체 과정**을 정리한 가이드입니다.
@@ -10,20 +12,20 @@
 
 ## 목표
 
-* 채용 사이트 크롤링 (Wanted, Incruit 등)
-* 데이터 정제 및 매핑
-* Supabase DB 저장
-* 자동 스케줄링 (GitHub Actions)
+- 채용 사이트 크롤링 (Wanted, Incruit 등)
+- 데이터 정제 및 매핑
+- Supabase DB 저장
+- 자동 스케줄링 (GitHub Actions)
 
 ---
 
 # 2. 기술 스택
 
-* Node.js
-* TypeScript
-* Supabase
-* Cheerio
-* GitHub Actions
+- Node.js
+- TypeScript
+- Supabase
+- Cheerio
+- GitHub Actions
 
 ---
 
@@ -31,22 +33,23 @@
 
 ## external_id 사용 이유
 
-* 크롤링 데이터는 중복 발생 가능
-* 각 사이트의 고유 ID 필요
+- 크롤링 데이터는 중복 발생 가능
+- 각 사이트의 고유 ID 필요
 
 ex)
-* Wanted: 335641
-* Incruit: 2603160002730
+
+- Wanted: 335641
+- Incruit: 2603160002730
 
 ---
 
 ## sourceType 컬럼
 
 ```ts
-"CRAWLING" | "USER"
+"CRAWLING" | "USER";
 ```
 
-* 크롤링 데이터 vs 사용자 입력 데이터 구분
+- 크롤링 데이터 vs 사용자 입력 데이터 구분
 
 ---
 
@@ -54,15 +57,18 @@ ex)
 
 ## 문제: 마감일 데이터 형식
 
-ex) 
-* "~04.15 (수)(2일전 등록)"
-* "상시채용"
-* "채용시 마감"
+ex)
+
+- "~04.15 (수)(2일전 등록)"
+- "상시채용"
+- "채용시 마감"
 
 ---
+
 ### 해결 방법 고민중
 
 -> 1. 프론트에서 날짜로 파싱 가능하면 날짜로, 불가능하면 공고 링크를 통해 확인하도록 유도
+
 ```ts
 if (날짜 파싱 가능) {
   deadline = ISO 날짜
@@ -71,6 +77,7 @@ if (날짜 파싱 가능) {
   deadline_text = "공고 링크 확인"
 }
 ```
+
 -> 2. 공고 상세 페이지 조회 API 추가해서 가져오기
 -> 3. 그냥 비워놓기
 
@@ -84,14 +91,13 @@ if (날짜 파싱 가능) {
 SUPABASE_PROJECT_URL=...
 SUPABASE_SERVICE_ROLE_API_KEY=...
 ```
+
 ---
 
 # 6. 데이터 삽입 흐름
 
 ```ts
-await supabase
-  .from('jobs')
-  .insert(mappedData)
+await supabase.from("jobs").insert(mappedData);
 ```
 
 ---
@@ -150,7 +156,7 @@ ts-node src/crawler/main.ts
 
 문제:
 
-* undici / Web API 충돌
+- undici / Web API 충돌
 
 ---
 
@@ -219,23 +225,22 @@ Settings → Secrets and variables → Actions
 
 ## 추가
 
-* SUPABASE_PROJECT_URL
-* SUPABASE_SERVICE_ROLE_API_KEY
+- SUPABASE_PROJECT_URL
+- SUPABASE_SERVICE_ROLE_API_KEY
 
 ---
 
 # 12. 트러블슈팅 정리
 
-
 ## File is not defined
 
 -> 원인:
 
-* undici + ts-node 충돌
+- undici + ts-node 충돌
 
 -> 해결:
 
-* build 후 node 실행
+- build 후 node 실행
 
 ---
 
@@ -243,7 +248,7 @@ Settings → Secrets and variables → Actions
 
 -> 해결:
 
-* Node 20 이상 사용
+- Node 20 이상 사용
 
 ---
 
@@ -251,29 +256,28 @@ Settings → Secrets and variables → Actions
 
 -> 원인:
 
-* 빌드 결과 경로 불일치
+- 빌드 결과 경로 불일치
 
 -> 해결:
 
 ```bash
 ls dist
 ```
+
 ---
 
 # 13. 최종 결과
 
 ## 완성 상태
 
-* 크롤링 성공
-* DB 저장 성공
-* 스케줄링 자동 실행
+- 크롤링 성공
+- DB 저장 성공
+- 스케줄링 자동 실행
 
 ---
 
 # 향후 개선
 
-* upsert로 중복 방지
-* 크롤링 실패 retry
-* 키워드 설정 가능하게 수정
-
-
+- 키워드 설정 가능하게 수정
+- 데이터 파싱 정밀도 향상
+- 유연하게 유지보수 가능하게 리팩토링 필요

@@ -2,6 +2,7 @@ export type CrawledJob = {
   externalId: string;
   title: string;
   company: string;
+  companyLogo?: string;
   location: string;
   experience: string;
   deadline: string;
@@ -20,6 +21,7 @@ export type JobPostingInsert = {
 
   title: string;
   company_name: string;
+  company_logo?: string;
 
   location: string;
   experience: string;

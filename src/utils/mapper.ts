@@ -26,6 +26,8 @@ export const mapToJobPosting = (
     title: job.title,
     company_name: job.company,
 
+    company_logo: job.companyLogo || "",
+
     location: job.location,
     experience: job.experience,
 

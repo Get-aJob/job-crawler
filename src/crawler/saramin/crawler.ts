@@ -5,16 +5,21 @@ type Job = {
   externalId: string;
   title: string;
   company: string;
+  companyLogo?: string;
   location: string;
   experience: string;
   deadline: string;
   url: string;
   content?: string | undefined;
-  requirements?: string;  
-  preferred?: string;     
+  requirements?: string;
+  preferred?: string;
 };
 
-const extractSection = (text: string, keywords: string[], stopKeywords: string[]) => {
+const extractSection = (
+  text: string,
+  keywords: string[],
+  stopKeywords: string[]
+) => {
   for (const keyword of keywords) {
     const regex = new RegExp(
       `${keyword}([\\s\\S]*?)(?=${stopKeywords.join("|")}|$)`
@@ -40,17 +45,17 @@ const fetchDetail = async (recIdx: string, referer: string) => {
 
     const rawContent = $(".user_content").text().replace(/\s+/g, " ").trim();
 
-const requirements = extractSection(
-  rawContent,
-  ["자격요건", "지원자격"],
-  ["우대사항", "복지", "근무", "마감"]
-);
+    const requirements = extractSection(
+      rawContent,
+      ["자격요건", "지원자격"],
+      ["우대사항", "복지", "근무", "마감"]
+    );
 
-const preferred = extractSection(
-  rawContent,
-  ["우대사항"],
-  ["복지", "근무", "마감"]
-);
+    const preferred = extractSection(
+      rawContent,
+      ["우대사항"],
+      ["복지", "근무", "마감"]
+    );
 
     return {
       content: rawContent,
@@ -59,6 +64,37 @@ const preferred = extractSection(
     };
   } catch (err) {
     console.error("상세 크롤링 실패:", err);
+    return null;
+  }
+};
+
+const fetchCompanyLogo = async (recIdx: string, referer: string) => {
+  try {
+    const url = `https://www.saramin.co.kr/zf_user/jobs/relay/view-ajax`;
+
+    const { data } = await axios.get(url, {
+      params: { rec_idx: recIdx },
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": referer,
+      },
+    });
+
+
+    if (typeof data === "object") {
+      return data?.company?.logo_url || null;
+    }
+
+    const $ = cheerio.load(data);
+
+    const logo =
+      $(".logo img").attr("src") ||
+      $("img.company_logo").attr("src") ||
+      null;
+
+    return logo;
+  } catch (err) {
+    console.error("로고 크롤링 실패:", err);
     return null;
   }
 };
@@ -97,24 +133,27 @@ export const crawlSaramin = async (): Promise<Job[]> => {
 
       if (!title || !company) continue;
 
-    const detail = await fetchDetail(externalId, fullUrl);
+      const [detail, companyLogo] = await Promise.all([
+        fetchDetail(externalId, fullUrl),
+        fetchCompanyLogo(externalId, fullUrl),
+      ]);
 
-    const job: Job = {
-      externalId,
-      title,
-      company,
-      location,
-      experience,
-      deadline,
-      url: fullUrl,
-    };
+      const job: Job = {
+        externalId,
+        title,
+        company,
+        companyLogo, 
+        location,
+        experience,
+        deadline,
+        url: fullUrl,
+      };
 
-    if (detail?.content) job.content = detail.content;
-    if (detail?.requirements) job.requirements = detail.requirements;
-    if (detail?.preferred) job.preferred = detail.preferred;
+      if (detail?.content) job.content = detail.content;
+      if (detail?.requirements) job.requirements = detail.requirements;
+      if (detail?.preferred) job.preferred = detail.preferred;
 
-    jobs.push(job);
-      
+      jobs.push(job);
     }
 
     return jobs;

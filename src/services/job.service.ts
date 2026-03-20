@@ -17,10 +17,12 @@ export const insertJobs = async (
       .from("job_postings")
       .upsert(rows, {
         onConflict: "source_type,external_id",
+        ignoreDuplicates: false,
       });
 
     if (error) {
-      console.error("DB 삽입 실패:", error);
+      console.error(`[${source}]DB 삽입 실패`);
+      console.error(error);
       return;
     }
 

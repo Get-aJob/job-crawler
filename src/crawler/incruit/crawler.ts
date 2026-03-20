@@ -13,6 +13,7 @@ type Job = {
   requirements: string;
   preferred: string;
   content: string;
+  companyLogo: string;
 };
 
 const URL =
@@ -47,7 +48,7 @@ const trimAfterKeyword = (text: string): string => {
     "주요 업무",
     "업무 내용",
     "자격요건",
-    "지원자격"
+    "지원자격",
   ];
 
   let idx = -1;
@@ -61,7 +62,6 @@ const trimAfterKeyword = (text: string): string => {
   }
 
   if (idx === -1) return text;
-
   return text.slice(idx);
 };
 
@@ -88,10 +88,8 @@ const splitSections = (text: string) => {
     const match = normalize.match(regex);
     if (match && match[2]) {
       let value = match[2].trim();
-
       value = trimBeforeKeyword(value, keyword);
       value = trimAfterKeyword(value) || "";
-
       sections[key] = value.trim();
     }
   }
@@ -125,7 +123,6 @@ const parseJobContent = (rawText: string) => {
 
   const requirements = toBullet(sections.requirements || "");
   const preferred = toBullet(sections.preferred || "");
-
   const fallback = toBullet(extractMainContent(cleaned));
 
   return {
@@ -169,7 +166,6 @@ export const crawlIncruit = async (): Promise<Job[]> => {
         .replace("스크랩", "")
         .trim();
 
-      // 🔥 location 개선
       const locationMatch = cleaned.match(
         /(서울|경기|인천|부산|대전|대구|광주|울산)[^\|,]*/
       );
@@ -196,15 +192,17 @@ export const crawlIncruit = async (): Promise<Job[]> => {
         requirements: "",
         preferred: "",
         content: "",
+        companyLogo: "",
       });
     });
 
-    // 🔥 병렬 처리 + rate limit
+    // ✅ 상세페이지 처리
     await Promise.all(
       jobs.map(async (job) => {
         try {
-          await delay(200); // 간단한 rate limit
+          await delay(200);
 
+          // ✅ popup 페이지 (로고 있음)
           const res = await axios.get(job.url, {
             responseType: "arraybuffer",
           });
@@ -212,8 +210,18 @@ export const crawlIncruit = async (): Promise<Job[]> => {
           const html = iconv.decode(res.data, "euc-kr");
           const $ = cheerio.load(html);
 
-          // 🔥 iframe 안정성 개선
-          const iframeSrc = $("iframe[src*='job']").attr("src");
+          // ✅ 로고는 여기서!
+          let logo = "";
+          const logoSrc = $(".jcinfo_logo img").attr("src");
+
+          if (logoSrc) {
+            logo = logoSrc.startsWith("http")
+              ? logoSrc
+              : `https:${logoSrc}`;
+          }
+
+          // ✅ iframe (내용용)
+          const iframeSrc = $("iframe[src*='jobpostcont']").attr("src");
 
           let rawText = "";
 
@@ -231,7 +239,6 @@ export const crawlIncruit = async (): Promise<Job[]> => {
 
             rawText = $$("body").text();
           } else {
-            // 🔥 fallback
             rawText = $("body").text();
           }
 
@@ -239,8 +246,8 @@ export const crawlIncruit = async (): Promise<Job[]> => {
 
           job.requirements = parsed.requirements;
           job.preferred = parsed.preferred;
+          job.companyLogo = logo;
 
-          // 🔥 content 개선
           job.content = [
             parsed.requirements,
             parsed.preferred,

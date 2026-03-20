@@ -18,7 +18,7 @@ export const mapToJobPosting = (
   return {
     created_by: userId,
 
-    source_type: source,
+    source_type: "auto",
     source_site_name: source,
     source_url: job.url,
     external_id: job.externalId,

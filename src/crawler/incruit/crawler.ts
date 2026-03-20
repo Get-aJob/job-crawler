@@ -10,22 +10,139 @@ type Job = {
   experience: string;
   deadline: string;
   url: string;
+  requirements: string;
+  preferred: string;
+  content: string;
 };
 
 const URL =
   "https://job.incruit.com/jobdb_list/searchjob.asp?col=job_all&kw=backend";
 
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+const cleanText = (text: string): string => {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/우리 회사를.*?소개해주세요/g, "")
+    .replace(/안녕하세요.*?연락드렸습니다\./g, "")
+    .replace(/헤드헌터.*?\./g, "")
+    .replace(/인크루트.*?오퍼/g, "")
+    .replace(/전체메뉴.*?오퍼/g, "")
+    .replace(/Email:.*?\s/g, "")
+    .replace(/www\..*?\s/g, "")
+    .replace(/\*.*?\*/g, "")
+    .replace(/\{.*?\}/g, "")
+    .replace(/\|/g, " ")
+    .trim();
+};
+
+const trimBeforeKeyword = (text: string, keyword: string) => {
+  const idx = text.indexOf(keyword);
+  return idx !== -1 ? text.slice(idx + keyword.length) : text;
+};
+
+const trimAfterKeyword = (text: string): string => {
+  const keywords = [
+    "담당업무",
+    "주요 업무",
+    "업무 내용",
+    "자격요건",
+    "지원자격"
+  ];
+
+  let idx = -1;
+
+  for (const keyword of keywords) {
+    const i = text.indexOf(keyword);
+    if (i !== -1) {
+      idx = i;
+      break;
+    }
+  }
+
+  if (idx === -1) return text;
+
+  return text.slice(idx);
+};
+
+const splitSections = (text: string) => {
+  const sections: Record<string, string> = {};
+  const normalize = text.replace(/\s+/g, " ");
+
+  const patterns = [
+    {
+      key: "requirements",
+      regex:
+        /(자격\s?요건|지원\s?자격)([\s\S]*?)(우대\s?사항|우대\s?조건|근무\s?조건|$)/,
+      keyword: "자격요건",
+    },
+    {
+      key: "preferred",
+      regex:
+        /(우대\s?사항|우대\s?조건)([\s\S]*?)(자격\s?요건|근무\s?조건|$)/,
+      keyword: "우대사항",
+    },
+  ];
+
+  for (const { key, regex, keyword } of patterns) {
+    const match = normalize.match(regex);
+    if (match && match[2]) {
+      let value = match[2].trim();
+
+      value = trimBeforeKeyword(value, keyword);
+      value = trimAfterKeyword(value) || "";
+
+      sections[key] = value.trim();
+    }
+  }
+
+  return sections;
+};
+
+const toBullet = (text: string): string => {
+  return text
+    .replace(/[\r\n]+/g, "\n")
+    .replace(/[-•·■□▶]/g, "\n- ")
+    .replace(/\s{2,}/g, "\n")
+    .split("\n")
+    .map(v => v.trim())
+    .filter(v => v.length > 5)
+    .join("\n");
+};
+
+const extractMainContent = (text: string) => {
+  const startIdx =
+    text.search(/(담당업무|주요 업무|업무 내용)/) !== -1
+      ? text.search(/(담당업무|주요 업무|업무 내용)/)
+      : 0;
+
+  return text.slice(startIdx, startIdx + 1000);
+};
+
+const parseJobContent = (rawText: string) => {
+  const cleaned = cleanText(rawText);
+  const sections = splitSections(cleaned);
+
+  const requirements = toBullet(sections.requirements || "");
+  const preferred = toBullet(sections.preferred || "");
+
+  const fallback = toBullet(extractMainContent(cleaned));
+
+  return {
+    requirements,
+    preferred,
+    fallback,
+  };
+};
+
 export const crawlIncruit = async (): Promise<Job[]> => {
   try {
     const response = await axios.get(URL, {
       responseType: "arraybuffer",
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-      },
+      headers: { "User-Agent": "Mozilla/5.0" },
     });
 
     const html = iconv.decode(response.data, "euc-kr");
-
     const $ = cheerio.load(html);
 
     const jobs: Job[] = [];
@@ -33,7 +150,6 @@ export const crawlIncruit = async (): Promise<Job[]> => {
     $(".c_row").each((_, el) => {
       const title = $(el).find(".cell_mid a").text().trim();
       const link = $(el).find(".cell_mid a").attr("href");
-
       if (!link) return;
 
       const fullUrl = link.startsWith("http")
@@ -53,43 +169,97 @@ export const crawlIncruit = async (): Promise<Job[]> => {
         .replace("스크랩", "")
         .trim();
 
+      // 🔥 location 개선
       const locationMatch = cleaned.match(
-        /(서울|경기|인천|부산|대전|대구|광주|울산)[^\s]*/
+        /(서울|경기|인천|부산|대전|대구|광주|울산)[^\|,]*/
       );
 
       const experienceMatch = cleaned.match(
         /(경력\s?\d+~\d+년|신입|경력)/
       );
 
-      const location = locationMatch ? locationMatch[0] : "";
-      const experience = experienceMatch ? experienceMatch[0] : "";
-
       const rawDeadline = $(el).find(".cell_last").text();
 
-      const deadline = rawDeadline
-      .replace(/\s+/g, " ")     
-      .replace("바로지원", "")    
-      .trim();
+      const externalId =
+        fullUrl.match(/jobdb_info\/jobpost\.asp\?job=(\d+)/)?.[1];
 
-      const externalId = fullUrl.match(/jobdb_info\/jobpost\.asp\?job=(\d+)/)?.[1];
       if (!externalId) return;
 
       jobs.push({
         externalId,
         title,
         company,
-        location,
-        experience,
-        deadline,
+        location: locationMatch ? locationMatch[0] : "",
+        experience: experienceMatch ? experienceMatch[0] : "",
+        deadline: rawDeadline.replace(/\s+/g, " ").trim(),
         url: fullUrl,
+        requirements: "",
+        preferred: "",
+        content: "",
       });
     });
+
+    // 🔥 병렬 처리 + rate limit
+    await Promise.all(
+      jobs.map(async (job) => {
+        try {
+          await delay(200); // 간단한 rate limit
+
+          const res = await axios.get(job.url, {
+            responseType: "arraybuffer",
+          });
+
+          const html = iconv.decode(res.data, "euc-kr");
+          const $ = cheerio.load(html);
+
+          // 🔥 iframe 안정성 개선
+          const iframeSrc = $("iframe[src*='job']").attr("src");
+
+          let rawText = "";
+
+          if (iframeSrc) {
+            const iframeUrl = iframeSrc.startsWith("http")
+              ? iframeSrc
+              : `https://job.incruit.com${iframeSrc}`;
+
+            const iframeRes = await axios.get(iframeUrl, {
+              responseType: "arraybuffer",
+            });
+
+            const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
+            const $$ = cheerio.load(iframeHtml);
+
+            rawText = $$("body").text();
+          } else {
+            // 🔥 fallback
+            rawText = $("body").text();
+          }
+
+          const parsed = parseJobContent(rawText);
+
+          job.requirements = parsed.requirements;
+          job.preferred = parsed.preferred;
+
+          // 🔥 content 개선
+          job.content = [
+            parsed.requirements,
+            parsed.preferred,
+            parsed.fallback,
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+
+        } catch (e: any) {
+          console.error("상세 실패:", job.url, e.message);
+        }
+      })
+    );
 
     console.log("인크루트 결과:", jobs.slice(0, 5));
 
     return jobs;
-  } catch (error) {
-    console.error("인크루트 크롤링 실패:", error);
+  } catch (error: any) {
+    console.error("인크루트 실패:", error.message);
     return [];
   }
 };

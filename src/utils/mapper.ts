@@ -1,11 +1,16 @@
 import { CrawledJob, JobPostingInsert } from "../../types";
 import { parseDeadline } from "./dateParser";
 
+
 export const mapToJobPosting = (
   job: CrawledJob,
   source: string,
   userId: string
 ): JobPostingInsert => {
+
+  const nowKST = new Date(
+  new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" })
+);
   const contentParts: string[] = [];
 
   if (job.requirements) {
@@ -38,6 +43,6 @@ export const mapToJobPosting = (
     deadline: parseDeadline(job.deadline),
     deadline_text: job.deadline,
 
-    crawled_at: new Date().toISOString(),
+    crawled_at: nowKST.toISOString(),
   };
 };

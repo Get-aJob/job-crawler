@@ -1,6 +1,5 @@
 export const KEYWORDS = [
+    "백앤드",
     "backend",
-    "frontend",
-    "nodejs",
-    "신입"
+    "frontend"
 ];

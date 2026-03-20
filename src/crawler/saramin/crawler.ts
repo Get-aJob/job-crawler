@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
+import { KEYWORDS } from "../../config/keywords";
 
 type Job = {
   externalId: string;
@@ -13,6 +14,8 @@ type Job = {
   content?: string | undefined;
   requirements?: string;
   preferred?: string;
+
+  keyword: string;
 };
 
 const extractSection = (
@@ -99,13 +102,13 @@ const fetchCompanyLogo = async (recIdx: string, referer: string) => {
   }
 };
 
-const URL =
-  "https://www.saramin.co.kr/zf_user/search?searchword=backend";
 
 export const crawlSaramin = async (): Promise<Job[]> => {
   const jobs: Job[] = [];
 
   try {
+    for (const keyword of KEYWORDS) {
+    const URL = `https://www.saramin.co.kr/zf_user/search?searchword=${encodeURIComponent(keyword)}`;
     const { data } = await axios.get(URL, {
       headers: {
         "User-Agent": "Mozilla/5.0",
@@ -147,6 +150,7 @@ export const crawlSaramin = async (): Promise<Job[]> => {
         experience,
         deadline,
         url: fullUrl,
+        keyword,
       };
 
       if (detail?.content) job.content = detail.content;
@@ -155,8 +159,13 @@ export const crawlSaramin = async (): Promise<Job[]> => {
 
       jobs.push(job);
     }
+  }
 
-    return jobs;
+      const uniqueJobs = Array.from(
+      new Map(jobs.map(job => [job.externalId, job])).values()
+    );
+
+    return uniqueJobs;
   } catch (error) {
     console.error("크롤링 실패:", error);
     return [];

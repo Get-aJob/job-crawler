@@ -161,11 +161,11 @@ export const crawlSaramin = async (): Promise<Job[]> => {
     }
   }
 
-      const uniqueJobs = Array.from(
+      const unique = Array.from(
       new Map(jobs.map(job => [job.externalId, job])).values()
     );
 
-    return uniqueJobs;
+    return unique;
   } catch (error) {
     console.error("크롤링 실패:", error);
     return [];

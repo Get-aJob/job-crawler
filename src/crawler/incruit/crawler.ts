@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import iconv from "iconv-lite";
+import { KEYWORDS } from "../../config/keywords";
 
 type Job = {
   externalId: string;
@@ -14,10 +15,12 @@ type Job = {
   preferred: string;
   content: string;
   companyLogo: string;
+
+  keyword: string;
 };
 
-const URL =
-  "https://job.incruit.com/jobdb_list/searchjob.asp?col=job_all&kw=backend";
+const getUrl = (keyword: string) =>
+  `https://job.incruit.com/jobdb_list/searchjob.asp?col=job_all&kw=${encodeURIComponent(keyword)}`;
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -133,8 +136,13 @@ const parseJobContent = (rawText: string) => {
 };
 
 export const crawlIncruit = async (): Promise<Job[]> => {
+  const allJobs: Job[] = [];
+
   try {
-    const response = await axios.get(URL, {
+    for(const keyword of KEYWORDS) {
+    await delay(200);
+    
+    const response = await axios.get(getUrl(keyword), {
       responseType: "arraybuffer",
       headers: { "User-Agent": "Mozilla/5.0" },
     });
@@ -193,6 +201,7 @@ export const crawlIncruit = async (): Promise<Job[]> => {
         preferred: "",
         content: "",
         companyLogo: "",
+        keyword
       });
     });
 
@@ -261,10 +270,16 @@ export const crawlIncruit = async (): Promise<Job[]> => {
         }
       })
     );
+      allJobs.push(...jobs);
+  }
 
-    console.log("인크루트 결과:", jobs.slice(0, 5));
+      const unique = Array.from(
+      new Map(allJobs.map(j => [j.externalId, j])).values()
+    );
 
-    return jobs;
+    console.log("인크루트 결과:", unique.slice(0, 5));
+
+    return unique;
   } catch (error: any) {
     console.error("인크루트 실패:", error.message);
     return [];

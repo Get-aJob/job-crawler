@@ -69,7 +69,7 @@ url: ${job.url}
 };
 
 const main = async () => {
-  const SOURCE: Source = "saramin"; 
+  const SOURCE: Source = "wanted"; 
 
   const results = await runCrawler(SOURCE);
 

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { KEYWORDS } from "../../config/keywords";
 
 type Job = {
   externalId: string;
@@ -13,6 +14,8 @@ type Job = {
   content?: string;
   requirements?: string;
   preferred?: string;
+
+  keyword: string;
 };
 
 
@@ -104,11 +107,15 @@ const fetchWantedDetail = async (jobId: number) => {
 
 
 export const crawlWanted = async (): Promise<Job[]> => {
+  const allJobs: Job[] = [];
+
   try {
+    for (const keyword of KEYWORDS) {
     const response = await axios.get(
       "https://www.wanted.co.kr/api/chaos/navigation/v1/results",
       {
         params: {
+          query: keyword,
           country: "kr",
           job_sort: "job.popularity_order",
           years: -1,
@@ -158,13 +165,21 @@ export const crawlWanted = async (): Promise<Job[]> => {
           content: detail?.content || "",
           requirements: detail?.requirements || "",
           preferred: detail?.preferred || "",
+
+          keyword,
         };
       })
     );
+      allJobs.push(...jobs);
+  }
 
-    console.log("원티드 결과:", jobs.slice(0, 3));
+      const unique = Array.from(
+      new Map(allJobs.map(j => [j.externalId, j])).values()
+    );
 
-    return jobs;
+    console.log("원티드 결과:", unique.slice(0, 3));
+
+    return unique;
   } catch (error) {
     console.error("크롤링 실패:", error);
     return [];

@@ -1,19 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-
-type Job = {
-  externalId: string;
-  title: string;
-  company: string;
-  companyLogo?: string;
-  location: string;
-  experience: string;
-  deadline: string;
-  url: string;
-  content?: string | undefined;
-  requirements?: string;
-  preferred?: string;
-};
+import { KEYWORDS } from "../../config/keywords";
+import { CrawledJob } from "../../../types";
 
 const extractSection = (
   text: string,
@@ -99,13 +87,13 @@ const fetchCompanyLogo = async (recIdx: string, referer: string) => {
   }
 };
 
-const URL =
-  "https://www.saramin.co.kr/zf_user/search?searchword=backend";
 
-export const crawlSaramin = async (): Promise<Job[]> => {
-  const jobs: Job[] = [];
+export const crawlSaramin = async (): Promise<CrawledJob[]> => {
+  const allJobs: CrawledJob[] = [];
 
   try {
+    for (const keyword of KEYWORDS) {
+    const URL = `https://www.saramin.co.kr/zf_user/search?searchword=${encodeURIComponent(keyword)}`;
     const { data } = await axios.get(URL, {
       headers: {
         "User-Agent": "Mozilla/5.0",
@@ -138,7 +126,7 @@ export const crawlSaramin = async (): Promise<Job[]> => {
         fetchCompanyLogo(externalId, fullUrl),
       ]);
 
-      const job: Job = {
+      const job: CrawledJob = {
         externalId,
         title,
         company,
@@ -147,16 +135,18 @@ export const crawlSaramin = async (): Promise<Job[]> => {
         experience,
         deadline,
         url: fullUrl,
+        keyword,
       };
 
       if (detail?.content) job.content = detail.content;
       if (detail?.requirements) job.requirements = detail.requirements;
       if (detail?.preferred) job.preferred = detail.preferred;
 
-      jobs.push(job);
+      allJobs.push(job);
     }
+  }
 
-    return jobs;
+    return allJobs;
   } catch (error) {
     console.error("크롤링 실패:", error);
     return [];

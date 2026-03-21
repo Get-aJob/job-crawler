@@ -1,11 +1,13 @@
 import { CrawledJob, JobPostingInsert } from "../../types";
 import { parseDeadline } from "./dateParser";
 
+
 export const mapToJobPosting = (
   job: CrawledJob,
   source: string,
   userId: string
 ): JobPostingInsert => {
+
   const contentParts: string[] = [];
 
   if (job.requirements) {

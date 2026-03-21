@@ -2,22 +2,8 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import iconv from "iconv-lite";
 import { KEYWORDS } from "../../config/keywords";
+import { CrawledJob } from "../../../types";
 
-type Job = {
-  externalId: string;
-  title: string;
-  company: string;
-  location: string;
-  experience: string;
-  deadline: string;
-  url: string;
-  requirements: string;
-  preferred: string;
-  content: string;
-  companyLogo: string;
-
-  keyword: string;
-};
 
 const getUrl = (keyword: string) =>
   `https://job.incruit.com/jobdb_list/searchjob.asp?col=job_all&kw=${encodeURIComponent(keyword)}`;
@@ -135,8 +121,8 @@ const parseJobContent = (rawText: string) => {
   };
 };
 
-export const crawlIncruit = async (): Promise<Job[]> => {
-  const allJobs: Job[] = [];
+export const crawlIncruit = async (): Promise<CrawledJob[]> => {
+  const allJobs: CrawledJob[] = [];
 
   try {
     for(const keyword of KEYWORDS) {
@@ -150,7 +136,7 @@ export const crawlIncruit = async (): Promise<Job[]> => {
     const html = iconv.decode(response.data, "euc-kr");
     const $ = cheerio.load(html);
 
-    const jobs: Job[] = [];
+    const jobs: CrawledJob[] = [];
 
     $(".c_row").each((_, el) => {
       const title = $(el).find(".cell_mid a").text().trim();
@@ -205,13 +191,11 @@ export const crawlIncruit = async (): Promise<Job[]> => {
       });
     });
 
-    // ✅ 상세페이지 처리
     await Promise.all(
       jobs.map(async (job) => {
         try {
           await delay(200);
 
-          // ✅ popup 페이지 (로고 있음)
           const res = await axios.get(job.url, {
             responseType: "arraybuffer",
           });
@@ -219,7 +203,6 @@ export const crawlIncruit = async (): Promise<Job[]> => {
           const html = iconv.decode(res.data, "euc-kr");
           const $ = cheerio.load(html);
 
-          // ✅ 로고는 여기서!
           let logo = "";
           const logoSrc = $(".jcinfo_logo img").attr("src");
 
@@ -229,7 +212,6 @@ export const crawlIncruit = async (): Promise<Job[]> => {
               : `https:${logoSrc}`;
           }
 
-          // ✅ iframe (내용용)
           const iframeSrc = $("iframe[src*='jobpostcont']").attr("src");
 
           let rawText = "";
@@ -273,13 +255,7 @@ export const crawlIncruit = async (): Promise<Job[]> => {
       allJobs.push(...jobs);
   }
 
-      const unique = Array.from(
-      new Map(allJobs.map(j => [j.externalId, j])).values()
-    );
-
-    console.log("인크루트 결과:", unique.slice(0, 5));
-
-    return unique;
+    return allJobs;
   } catch (error: any) {
     console.error("인크루트 실패:", error.message);
     return [];

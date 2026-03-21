@@ -1,22 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { KEYWORDS } from "../../config/keywords";
-
-type Job = {
-  externalId: string;
-  title: string;
-  company: string;
-  companyLogo?: string;
-  location: string;
-  experience: string;
-  deadline: string;
-  url: string;
-  content?: string | undefined;
-  requirements?: string;
-  preferred?: string;
-
-  keyword: string;
-};
+import { CrawledJob } from "../../../types";
 
 const extractSection = (
   text: string,
@@ -103,8 +88,8 @@ const fetchCompanyLogo = async (recIdx: string, referer: string) => {
 };
 
 
-export const crawlSaramin = async (): Promise<Job[]> => {
-  const jobs: Job[] = [];
+export const crawlSaramin = async (): Promise<CrawledJob[]> => {
+  const allJobs: CrawledJob[] = [];
 
   try {
     for (const keyword of KEYWORDS) {
@@ -141,7 +126,7 @@ export const crawlSaramin = async (): Promise<Job[]> => {
         fetchCompanyLogo(externalId, fullUrl),
       ]);
 
-      const job: Job = {
+      const job: CrawledJob = {
         externalId,
         title,
         company,
@@ -157,15 +142,11 @@ export const crawlSaramin = async (): Promise<Job[]> => {
       if (detail?.requirements) job.requirements = detail.requirements;
       if (detail?.preferred) job.preferred = detail.preferred;
 
-      jobs.push(job);
+      allJobs.push(job);
     }
   }
 
-      const unique = Array.from(
-      new Map(jobs.map(job => [job.externalId, job])).values()
-    );
-
-    return unique;
+    return allJobs;
   } catch (error) {
     console.error("크롤링 실패:", error);
     return [];

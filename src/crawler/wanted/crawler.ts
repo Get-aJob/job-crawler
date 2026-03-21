@@ -1,22 +1,6 @@
 import axios from "axios";
 import { KEYWORDS } from "../../config/keywords";
-
-type Job = {
-  externalId: string;
-  title: string;
-  company: string;
-  companyLogo?: string;
-  location: string;
-  experience: string;
-  deadline: string;
-  url: string;
-
-  content?: string;
-  requirements?: string;
-  preferred?: string;
-
-  keyword: string;
-};
+import { CrawledJob } from "../../../types";
 
 
 const formatCareer = (career: any) => {
@@ -105,22 +89,30 @@ const fetchWantedDetail = async (jobId: number) => {
   }
 };
 
+const isMatched = (job: CrawledJob, keyword: string) => {
+  const text = `
+    ${job.title}
+    ${job.content || ""}
+    ${job.requirements || ""}
+    ${job.preferred || ""}
+  `.toLowerCase();
 
-export const crawlWanted = async (): Promise<Job[]> => {
-  const allJobs: Job[] = [];
+  return text.includes(keyword.toLowerCase());
+};
+
+export const crawlWanted = async (): Promise<CrawledJob[]> => {
+  const allJobs: CrawledJob[] = [];
 
   try {
-    for (const keyword of KEYWORDS) {
     const response = await axios.get(
       "https://www.wanted.co.kr/api/chaos/navigation/v1/results",
       {
         params: {
-          query: keyword,
           country: "kr",
           job_sort: "job.popularity_order",
           years: -1,
           locations: "all",
-          limit: 20,
+          limit: 50,
           offset: 0,
         },
         headers: {
@@ -132,7 +124,7 @@ export const crawlWanted = async (): Promise<Job[]> => {
 
     const rawJobs = response.data?.data || [];
 
-    const jobs: Job[] = await Promise.all(
+    const jobs: CrawledJob[] = await Promise.all(
       rawJobs.map(async (item: any) => {
         const detail = await fetchWantedDetail(item.id);
 
@@ -140,46 +132,38 @@ export const crawlWanted = async (): Promise<Job[]> => {
           externalId: item.id.toString(),
           title: item.position || "",
           company: item.company?.name || "",
-
           companyLogo:
-            detail?.companyLogo ||
-            item.company?.logo_url ||
-            "",
-
+            detail?.companyLogo || item.company?.logo_url || "",
           location:
             item.address?.full_location ||
             item.address?.location ||
             "",
-
           experience:
-            detail?.experience ||
-            formatCareer(item.career),
-
+            detail?.experience || formatCareer(item.career),
           deadline:
-            detail?.deadline ||
-            item.due_time ||
-            "",
-
+            detail?.deadline || item.due_time || "",
           url: `https://www.wanted.co.kr/wd/${item.id}`,
-
           content: detail?.content || "",
           requirements: detail?.requirements || "",
           preferred: detail?.preferred || "",
 
-          keyword,
+          keyword: "", 
         };
       })
     );
-      allJobs.push(...jobs);
-  }
 
-      const unique = Array.from(
-      new Map(allJobs.map(j => [j.externalId, j])).values()
-    );
+    for (const job of jobs) {
+      for (const keyword of KEYWORDS) {
+        if (isMatched(job, keyword)) {
+          allJobs.push({
+            ...job,
+            keyword,
+          });
+        }
+      }
+    }
 
-    console.log("원티드 결과:", unique.slice(0, 3));
-
-    return unique;
+    return allJobs;
   } catch (error) {
     console.error("크롤링 실패:", error);
     return [];

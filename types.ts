@@ -10,6 +10,9 @@ export type CrawledJob = {
 
   requirements?: string;
   preferred?: string;
+  content?: string;
+
+  keyword : string;
 };
 
 export type JobPostingInsert = {

@@ -16,8 +16,8 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "start": "ts-node src/crawler/test.ts",
+    "start": "ts-node src/crawler/main.ts",
     "build": "tsc",
-    "start:prod": "node dist/crawler/test.js"
+    "start:prod": "node dist/crawler/main.js"
   }
 }

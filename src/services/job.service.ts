@@ -4,12 +4,27 @@ import { mapToJobPosting } from "../utils/mapper";
 
 const CREATED_BY = "890133b0-bb6c-4cdf-a7b9-fb1a181d8bbe"; // 크롤링용 유저
 
+const dedupeJobs = (jobs: CrawledJob[]): CrawledJob[] => {
+  const map = new Map<string, CrawledJob>();
+
+  for (const job of jobs) {
+    if (!map.has(job.externalId)) {
+      map.set(job.externalId, job);
+    }
+  }
+
+  return Array.from(map.values());
+};
+
 export const insertJobs = async (
   jobs: CrawledJob[],
   source: string
 ) => {
   try {
-    const rows = jobs.map((job) =>
+
+    const dedupedJobs = dedupeJobs(jobs);
+
+    const rows = dedupedJobs.map((job) =>
       mapToJobPosting(job, source, CREATED_BY)
     );
 

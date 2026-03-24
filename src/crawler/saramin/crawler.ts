@@ -90,65 +90,84 @@ const fetchCompanyLogo = async (recIdx: string, referer: string) => {
 
 export const crawlSaramin = async (): Promise<CrawledJob[]> => {
   const allJobs: CrawledJob[] = [];
+  const failedKeywords: string[] = [];
 
-  try {
-    for (const keyword of KEYWORDS) {
-    const URL = `https://www.saramin.co.kr/zf_user/search?searchword=${encodeURIComponent(keyword)}`;
-    const { data } = await axios.get(URL, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-      },
-    });
+  for (const keyword of KEYWORDS) {
+    try {
+      const URL = `https://www.saramin.co.kr/zf_user/search?searchword=${encodeURIComponent(keyword)}`;
 
-    const $ = cheerio.load(data);
+      const { data } = await axios.get(URL, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+        },
+      });
 
-    const elements = $(".item_recruit").toArray();
+      const $ = cheerio.load(data);
+      const elements = $(".item_recruit").toArray();
 
-    for (const el of elements) {
-      const title = $(el).find(".job_tit a").text().trim();
-      const link = $(el).find(".job_tit a").attr("href");
-      if (!link) continue;
+      const jobs: CrawledJob[] = [];
 
-      const externalId = link.match(/rec_idx=(\d+)/)?.[1];
-      if (!externalId) continue;
+      for (const el of elements) {
+        const title = $(el).find(".job_tit a").text().trim();
+        const link = $(el).find(".job_tit a").attr("href");
+        if (!link) continue;
 
-      const company = $(el).find(".corp_name").text().trim();
-      const location = $(el).find(".job_condition span").eq(0).text().trim();
-      const experience = $(el).find(".job_condition span").eq(1).text().trim();
-      const deadline = $(el).find(".job_date").text().trim();
+        const externalId = link.match(/rec_idx=(\d+)/)?.[1];
+        if (!externalId) continue;
 
-      const fullUrl = `https://www.saramin.co.kr${link}`;
+        const company = $(el).find(".corp_name").text().trim();
+        const location = $(el).find(".job_condition span").eq(0).text().trim();
+        const experience = $(el).find(".job_condition span").eq(1).text().trim();
+        const deadline = $(el).find(".job_date").text().trim();
 
-      if (!title || !company) continue;
+        const fullUrl = `https://www.saramin.co.kr${link}`;
 
-      const [detail, companyLogo] = await Promise.all([
-        fetchDetail(externalId, fullUrl),
-        fetchCompanyLogo(externalId, fullUrl),
-      ]);
+        if (!title || !company) continue;
 
-      const job: CrawledJob = {
-        externalId,
-        title,
-        company,
-        companyLogo, 
-        location,
-        experience,
-        deadline,
-        url: fullUrl,
-        keyword,
-      };
+        jobs.push({
+          externalId,
+          title,
+          company,
+          companyLogo: "",
+          location,
+          experience,
+          deadline,
+          url: fullUrl,
+          keyword,
+        });
+      }
+      
+      await Promise.all(
+        jobs.map(async (job) => {
+          try {
+            const [detail, companyLogo] = await Promise.all([
+              fetchDetail(job.externalId, job.url),
+              fetchCompanyLogo(job.externalId, job.url),
+            ]);
 
-      if (detail?.content) job.content = detail.content;
-      if (detail?.requirements) job.requirements = detail.requirements;
-      if (detail?.preferred) job.preferred = detail.preferred;
+            if (detail?.content) job.content = detail.content;
+            if (detail?.requirements) job.requirements = detail.requirements;
+            if (detail?.preferred) job.preferred = detail.preferred;
 
-      allJobs.push(job);
+            job.companyLogo = companyLogo;
+
+          } catch (e: any) {
+            console.error("상세 실패:", job.url, e.message);
+          }
+        })
+      );
+
+      allJobs.push(...jobs);
+
+    } catch (error: any) {
+      console.error(`사람인 키워드 실패: ${keyword}`, error.message);
+      failedKeywords.push(keyword);
     }
   }
 
-    return allJobs;
-  } catch (error) {
-    console.error("크롤링 실패:", error);
-    return [];
+  if (failedKeywords.length > 0) {
+    console.warn("실패한 키워드:", failedKeywords);
   }
+
+  return allJobs;
 };

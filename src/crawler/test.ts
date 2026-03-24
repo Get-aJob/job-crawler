@@ -3,6 +3,7 @@ import { crawlIncruit } from "./incruit/crawler";
 import { crawlWanted } from "./wanted/crawler";
 import { CrawledJob } from "../../types";
 import { detectPlatform } from "../utils/detectPlatform";
+import { crawlJobByUrl } from "./crawlJobByUrl";
 
 type Source = "saramin" | "incruit" | "wanted" | "all";
 
@@ -116,15 +117,25 @@ const testDetectPlatformWithRealData = (jobs: CrawledJob[]) => {
   }
 };
 
+const testIntegratedCrawl = async () => {
+  console.log("\n 수동 크롤링 테스트\n");
+
+  const url = "https://www.wanted.co.kr/wd/338070";
+
+  const job = await crawlJobByUrl(url);
+
+  console.log(job);
+};
 
 const main = async () => {
-  const SOURCE: Source = "wanted"; 
+  await testIntegratedCrawl()
+  // const SOURCE: Source = "wanted"; 
 
-  const rawJobs = await runCrawler(SOURCE);
+  // const rawJobs = await runCrawler(SOURCE);
 
-  testDetectPlatformWithRealData(rawJobs);
+  // testDetectPlatformWithRealData(rawJobs);
 
-  printResult(rawJobs);
+  // printResult(rawJobs);
 };
 
 main();

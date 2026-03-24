@@ -1,23 +1,12 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import iconv from "iconv-lite";
+import { KEYWORDS } from "../../config/keywords";
+import { CrawledJob } from "../../../types";
 
-type Job = {
-  externalId: string;
-  title: string;
-  company: string;
-  location: string;
-  experience: string;
-  deadline: string;
-  url: string;
-  requirements: string;
-  preferred: string;
-  content: string;
-  companyLogo: string;
-};
 
-const URL =
-  "https://job.incruit.com/jobdb_list/searchjob.asp?col=job_all&kw=backend";
+const getUrl = (keyword: string) =>
+  `https://job.incruit.com/jobdb_list/searchjob.asp?col=job_all&kw=${encodeURIComponent(keyword)}`;
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -132,141 +121,150 @@ const parseJobContent = (rawText: string) => {
   };
 };
 
-export const crawlIncruit = async (): Promise<Job[]> => {
-  try {
-    const response = await axios.get(URL, {
-      responseType: "arraybuffer",
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
+export const crawlIncruit = async (): Promise<CrawledJob[]> => {
+  const allJobs: CrawledJob[] = [];
+  const failedKeywords: string[] = [];
 
-    const html = iconv.decode(response.data, "euc-kr");
-    const $ = cheerio.load(html);
+  for (const keyword of KEYWORDS) {
+    try {
+      await delay(200);
 
-    const jobs: Job[] = [];
-
-    $(".c_row").each((_, el) => {
-      const title = $(el).find(".cell_mid a").text().trim();
-      const link = $(el).find(".cell_mid a").attr("href");
-      if (!link) return;
-
-      const fullUrl = link.startsWith("http")
-        ? link
-        : `https://job.incruit.com${link}`;
-
-      const company = $(el).find(".cell_first a").text().trim();
-
-      const conditionText = $(el)
-        .find(".cell_mid")
-        .text()
-        .replace(/\s+/g, " ")
-        .trim();
-
-      const cleaned = conditionText
-        .replace(title, "")
-        .replace("스크랩", "")
-        .trim();
-
-      const locationMatch = cleaned.match(
-        /(서울|경기|인천|부산|대전|대구|광주|울산)[^\|,]*/
-      );
-
-      const experienceMatch = cleaned.match(
-        /(경력\s?\d+~\d+년|신입|경력)/
-      );
-
-      const rawDeadline = $(el).find(".cell_last").text();
-
-      const externalId =
-        fullUrl.match(/jobdb_info\/jobpost\.asp\?job=(\d+)/)?.[1];
-
-      if (!externalId) return;
-
-      jobs.push({
-        externalId,
-        title,
-        company,
-        location: locationMatch ? locationMatch[0] : "",
-        experience: experienceMatch ? experienceMatch[0] : "",
-        deadline: rawDeadline.replace(/\s+/g, " ").trim(),
-        url: fullUrl,
-        requirements: "",
-        preferred: "",
-        content: "",
-        companyLogo: "",
+      const response = await axios.get(getUrl(keyword), {
+        responseType: "arraybuffer",
+        headers: { "User-Agent": "Mozilla/5.0" },
       });
-    });
 
-    // ✅ 상세페이지 처리
-    await Promise.all(
-      jobs.map(async (job) => {
-        try {
-          await delay(200);
+      const html = iconv.decode(response.data, "euc-kr");
+      const $ = cheerio.load(html);
 
-          // ✅ popup 페이지 (로고 있음)
-          const res = await axios.get(job.url, {
-            responseType: "arraybuffer",
-          });
+      const jobs: CrawledJob[] = [];
 
-          const html = iconv.decode(res.data, "euc-kr");
-          const $ = cheerio.load(html);
+      $(".c_row").each((_, el) => {
+        const title = $(el).find(".cell_mid a").text().trim();
+        const link = $(el).find(".cell_mid a").attr("href");
+        if (!link) return;
 
-          // ✅ 로고는 여기서!
-          let logo = "";
-          const logoSrc = $(".jcinfo_logo img").attr("src");
+        const fullUrl = link.startsWith("http")
+          ? link
+          : `https://job.incruit.com${link}`;
 
-          if (logoSrc) {
-            logo = logoSrc.startsWith("http")
-              ? logoSrc
-              : `https:${logoSrc}`;
-          }
+        const company = $(el).find(".cell_first a").text().trim();
 
-          // ✅ iframe (내용용)
-          const iframeSrc = $("iframe[src*='jobpostcont']").attr("src");
+        const conditionText = $(el)
+          .find(".cell_mid")
+          .text()
+          .replace(/\s+/g, " ")
+          .trim();
 
-          let rawText = "";
+        const cleaned = conditionText
+          .replace(title, "")
+          .replace("스크랩", "")
+          .trim();
 
-          if (iframeSrc) {
-            const iframeUrl = iframeSrc.startsWith("http")
-              ? iframeSrc
-              : `https://job.incruit.com${iframeSrc}`;
+        const locationMatch = cleaned.match(
+          /(서울|경기|인천|부산|대전|대구|광주|울산)[^\|,]*/
+        );
 
-            const iframeRes = await axios.get(iframeUrl, {
+        const experienceMatch = cleaned.match(
+          /(경력\s?\d+~\d+년|신입|경력)/
+        );
+
+        const rawDeadline = $(el).find(".cell_last").text();
+
+        const externalId =
+          fullUrl.match(/jobdb_info\/jobpost\.asp\?job=(\d+)/)?.[1];
+
+        if (!externalId) return;
+
+        jobs.push({
+          externalId,
+          title,
+          company,
+          location: locationMatch ? locationMatch[0] : "",
+          experience: experienceMatch ? experienceMatch[0] : "",
+          deadline: rawDeadline.replace(/\s+/g, " ").trim(),
+          url: fullUrl,
+          requirements: "",
+          preferred: "",
+          content: "",
+          companyLogo: "",
+          keyword,
+        });
+      });
+
+      await Promise.all(
+        jobs.map(async (job) => {
+          try {
+            await delay(200);
+
+            const res = await axios.get(job.url, {
               responseType: "arraybuffer",
             });
 
-            const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
-            const $$ = cheerio.load(iframeHtml);
+            const html = iconv.decode(res.data, "euc-kr");
+            const $ = cheerio.load(html);
 
-            rawText = $$("body").text();
-          } else {
-            rawText = $("body").text();
+            let logo = "";
+            const logoSrc = $(".jcinfo_logo img").attr("src");
+
+            if (logoSrc) {
+              logo = logoSrc.startsWith("http")
+                ? logoSrc
+                : `https:${logoSrc}`;
+            }
+
+            const iframeSrc = $("iframe[src*='jobpostcont']").attr("src");
+
+            let rawText = "";
+
+            if (iframeSrc) {
+              const iframeUrl = iframeSrc.startsWith("http")
+                ? iframeSrc
+                : `https://job.incruit.com${iframeSrc}`;
+
+              const iframeRes = await axios.get(iframeUrl, {
+                responseType: "arraybuffer",
+              });
+
+              const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
+              const $$ = cheerio.load(iframeHtml);
+
+              rawText = $$("body").text();
+            } else {
+              rawText = $("body").text();
+            }
+
+            const parsed = parseJobContent(rawText);
+
+            job.requirements = parsed.requirements;
+            job.preferred = parsed.preferred;
+            job.companyLogo = logo;
+
+            job.content = [
+              parsed.requirements,
+              parsed.preferred,
+              parsed.fallback,
+            ]
+              .filter(Boolean)
+              .join("\n\n");
+
+          } catch (e: any) {
+            console.error("상세 실패:", job.url, e.message);
           }
+        })
+      );
 
-          const parsed = parseJobContent(rawText);
+      allJobs.push(...jobs);
 
-          job.requirements = parsed.requirements;
-          job.preferred = parsed.preferred;
-          job.companyLogo = logo;
-
-          job.content = [
-            parsed.requirements,
-            parsed.preferred,
-            parsed.fallback,
-          ]
-            .filter(Boolean)
-            .join("\n\n");
-
-        } catch (e: any) {
-          console.error("상세 실패:", job.url, e.message);
-        }
-      })
-    );
-
-    console.log("인크루트 결과:", jobs.slice(0, 5));
-
-    return jobs;
-  } catch (error: any) {
-    console.error("인크루트 실패:", error.message);
-    return [];
+    } catch (error: any) {
+      console.error(`인크루트 키워드 실패: ${keyword}`, error.message);
+      failedKeywords.push(keyword);
+    }
   }
+
+  if (failedKeywords.length > 0) {
+    console.warn("실패한 키워드 목록:", failedKeywords);
+  }
+
+  return allJobs;
 };

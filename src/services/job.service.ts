@@ -2,14 +2,16 @@ import { supabase } from "../../supabase";
 import { CrawledJob } from "../../types";
 import { mapToJobPosting } from "../utils/mapper";
 
-const CREATED_BY = "890133b0-bb6c-4cdf-a7b9-fb1a181d8bbe"; // 크롤링용 유저
+const CREATED_BY = "890133b0-bb6c-4cdf-a7b9-fb1a181d8bbe"; 
 
-const dedupeJobs = (jobs: CrawledJob[]): CrawledJob[] => {
+const dedupeJobs = (jobs: CrawledJob[], source: string): CrawledJob[] => {
   const map = new Map<string, CrawledJob>();
 
   for (const job of jobs) {
-    if (!map.has(job.externalId)) {
-      map.set(job.externalId, job);
+    const key = `${source}-${job.externalId}`;
+
+    if (!map.has(key)) {
+      map.set(key, job);
     }
   }
 
@@ -22,7 +24,7 @@ export const insertJobs = async (
 ) => {
   try {
 
-    const dedupedJobs = dedupeJobs(jobs);
+    const dedupedJobs = dedupeJobs(jobs, source);
 
     const rows = dedupedJobs.map((job) =>
       mapToJobPosting(job, source, CREATED_BY)
@@ -31,7 +33,7 @@ export const insertJobs = async (
     const { data, error } = await supabase
       .from("job_postings")
       .upsert(rows, {
-        onConflict: "source_type,external_id",
+        onConflict: "source_site_name,external_id",
         ignoreDuplicates: false,
       });
 

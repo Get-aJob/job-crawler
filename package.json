@@ -7,17 +7,21 @@
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
     "node.js": "^0.0.1-security",
+    "nodejs": "^0.0.0",
     "p-limit": "^7.3.0",
     "undici": "^5.29.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
-  "scripts": {
-    "start": "ts-node src/crawler/test.ts",
-    "build": "tsc",
-    "start:prod": "node dist/crawler/test.js"
-  }
+"scripts": {
+  "dev:api": "ts-node src/server.ts",
+  "dev:crawler": "ts-node src/crawler/main.ts",
+  "build": "tsc",
+  "start": "node dist/server.js",
+  "start:crawler": "node dist/crawler/main.js"
+}
 }

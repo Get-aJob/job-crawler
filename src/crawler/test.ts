@@ -4,6 +4,7 @@ import { crawlWanted } from "./wanted/crawler";
 import { CrawledJob } from "../../types";
 import { detectPlatform } from "../utils/detectPlatform";
 import { crawlJobByUrl } from "./crawlJobByUrl";
+import { saveJob } from "../services/saveJob";
 
 type Source = "saramin" | "incruit" | "wanted" | "all";
 
@@ -128,7 +129,7 @@ const testIntegratedCrawl = async () => {
 };
 
 const main = async () => {
-  await testIntegratedCrawl()
+  //await testIntegratedCrawl()
   // const SOURCE: Source = "wanted"; 
 
   // const rawJobs = await runCrawler(SOURCE);
@@ -136,6 +137,12 @@ const main = async () => {
   // testDetectPlatformWithRealData(rawJobs);
 
   // printResult(rawJobs);
+   const url =
+    "https://job.incruit.com/jobdb_info/popupjobpost.asp?job=2603250000324&inOut=In";
+
+  const result = await saveJob(url);
+
+  console.log(result);
 };
 
 main();

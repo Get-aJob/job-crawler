@@ -39,6 +39,24 @@ const extractSaraminId = (url: string): string => {
   return match[1];
 };
 
-const extractIncruitId = (url: string): string => {
-  throw new Error("아직 구현 안됨");
+export const extractIncruitId = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+
+    const jobId =
+      parsed.searchParams.get("job") ||
+      parsed.searchParams.get("Job");
+
+    if (jobId) return jobId;
+
+    const pathMatch = parsed.pathname.match(/(\d{8,})/);
+    if (pathMatch?.[1]) return pathMatch[1];
+
+    const anyMatch = url.match(/(\d{8,})/);
+    if (anyMatch?.[1]) return anyMatch[1];
+
+    throw new Error();
+  } catch {
+    throw new Error("인크루트 ID 추출 실패");
+  }
 };

@@ -120,7 +120,7 @@ const testDetectPlatformWithRealData = (jobs: CrawledJob[]) => {
 const testIntegratedCrawl = async () => {
   console.log("\n 수동 크롤링 테스트\n");
 
-  const url = "https://www.saramin.co.kr/zf_user/jobs/relay/pop-view?rec_idx=53305118&t_ref=main&t_ref_content=prime_plus_fix_expand";
+  const url = "https://job.incruit.com/jobdb_info/popupjobpost.asp?job=2603180001063&inOut=In";
 
   const job = await crawlJobByUrl(url);
 

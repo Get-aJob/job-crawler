@@ -23,29 +23,26 @@ export const insertJobs = async (
   source: string,
   sourceType: "auto" | "manual" = "auto"
 ) => {
-  try {
+  const dedupedJobs = dedupeJobs(jobs, source);
 
-    const dedupedJobs = dedupeJobs(jobs, source);
+  const rows = dedupedJobs.map((job) =>
+    mapToJobPosting(job, source, CREATED_BY, sourceType)
+  );
 
-    const rows = dedupedJobs.map((job) =>
-      mapToJobPosting(job, source, CREATED_BY, sourceType)
-    );
+  const { error } = await supabase
+    .from("job_postings")
+    .upsert(rows, {
+      onConflict: "source_site_name,external_id",
+      ignoreDuplicates: false,
+    });
 
-    const { data, error } = await supabase
-      .from("job_postings")
-      .upsert(rows, {
-        onConflict: "source_site_name,external_id",
-        ignoreDuplicates: false,
-      });
+  if (error) {
+    console.error(`[${source}] DB 삽입 실패`, error);
 
-    if (error) {
-      console.error(`[${source}]DB 삽입 실패`);
-      console.error(error);
-      return;
-    }
-
-    console.log(`${source} 데이터 ${rows.length}개 저장 완료`);
-  } catch (err) {
-    console.error("전체 실패:", err);
+    throw new Error("DB_INSERT_FAILED");
   }
+
+  console.log(`${source} 데이터 ${rows.length}개 저장 완료`);
+
+  return rows.length;
 };

@@ -11,13 +11,16 @@
     "undici": "^5.29.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
-  "scripts": {
-    "start": "ts-node src/crawler/test.ts",
-    "build": "tsc",
-    "start:prod": "node dist/crawler/test.js"
-  }
+"scripts": {
+  "dev:api": "ts-node src/server.ts",
+  "dev:crawler": "ts-node src/crawler/main.ts",
+  "build": "tsc",
+  "start": "node dist/src/server.js",
+  "start:crawler": "node dist/src/crawler/main.js"
+}
 }

@@ -22,6 +22,6 @@
   "dev:crawler": "ts-node src/crawler/main.ts",
   "build": "tsc",
   "start": "node dist/server.js",
-  "start:crawler": "node dist/crawler/main.js"
+  "start:crawler": "node dist/src/crawler/main.js"
 }
 }

@@ -1,5 +1,6 @@
 import { detectPlatform } from "../utils/detectPlatform";
 import { crawlWantedByUrl } from "./wanted/crawlWantedByUrl";
+import { crawlSaraminByUrl } from "./saramin/crawlSaraminByUrl";
 
 
 export const crawlJobByUrl = async (url: string) => {
@@ -14,6 +15,7 @@ export const crawlJobByUrl = async (url: string) => {
       return await crawlWantedByUrl(url);
 
     case "saramin":
+      return await crawlSaraminByUrl(url);
     case "incruit":
       throw new Error("아직 구현 안됨");
 

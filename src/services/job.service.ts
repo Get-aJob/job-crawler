@@ -20,14 +20,15 @@ const dedupeJobs = (jobs: CrawledJob[], source: string): CrawledJob[] => {
 
 export const insertJobs = async (
   jobs: CrawledJob[],
-  source: string
+  source: string,
+  sourceType: "auto" | "manual" = "auto"
 ) => {
   try {
 
     const dedupedJobs = dedupeJobs(jobs, source);
 
     const rows = dedupedJobs.map((job) =>
-      mapToJobPosting(job, source, CREATED_BY)
+      mapToJobPosting(job, source, CREATED_BY, sourceType)
     );
 
     const { data, error } = await supabase

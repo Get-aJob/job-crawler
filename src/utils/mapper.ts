@@ -5,7 +5,8 @@ import { parseDeadline } from "./dateParser";
 export const mapToJobPosting = (
   job: CrawledJob,
   source: string,
-  userId: string
+  userId: string,
+  sourceType: "auto" | "manual" = "auto"
 ): JobPostingInsert => {
 
   const contentParts: string[] = [];
@@ -20,7 +21,7 @@ export const mapToJobPosting = (
   return {
     created_by: userId,
 
-    source_type: "auto",
+    source_type: sourceType,
     source_site_name: source,
     source_url: job.url,
     external_id: job.externalId,

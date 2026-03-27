@@ -26,20 +26,6 @@ const formatCareer = (career: any) => {
 
 const fetchWantedDetail = async (jobId: number, buildId: string) => {
   try {
-    const htmlRes = await axios.get(`https://www.wanted.co.kr/wd/${jobId}`, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-      },
-      timeout: 10000,
-    });
-
-    const buildIdMatch = htmlRes.data.match(/"buildId":"([^"]+)"/);
-    if (!buildIdMatch) {
-      console.error("원티드 buildId 추출 실패");
-      return null;
-    }
-    const buildId = buildIdMatch[1];
-
     const res = await axios.get(
       `https://www.wanted.co.kr/_next/data/${buildId}/wd/${jobId}.json?jobId=${jobId}`,
       {
@@ -130,8 +116,16 @@ export const crawlWanted = async (): Promise<CrawledJob[]> => {
     return []; 
   }
 
+    if (rawJobs.length === 0) {
+    console.warn("원티드 API 결과 없음");
+    return [];
+  }
+
+
   const jobs: CrawledJob[] = [];
 
+  let buildId: string;
+  try {
   const sampleRes = await axios.get(`https://www.wanted.co.kr/wd/${rawJobs[0].id}`, {
     headers: { "User-Agent": "Mozilla/5.0" },
     timeout: 10000,
@@ -141,7 +135,11 @@ export const crawlWanted = async (): Promise<CrawledJob[]> => {
     console.error("원티드 buildId 추출 실패");
     return [];
   }
-  const buildId = buildIdMatch[1];
+  buildId = buildIdMatch[1];
+} catch(e: any) {
+  console.error("원티드 buildId 요청 실패", e.message);
+  return [];
+}
 
   
   for (const item of rawJobs) {

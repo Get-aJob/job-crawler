@@ -135,21 +135,21 @@ const main = async () => {
  //await testIntegratedCrawl()
 
 //자동크롤링 테스트 로직
-  //  const SOURCE: Source = "wanted"; 
+   const SOURCE: Source = "wanted"; 
 
-  // const rawJobs = await runCrawler(SOURCE);
+  const rawJobs = await runCrawler(SOURCE);
 
-  //  testDetectPlatformWithRealData(rawJobs);
+   testDetectPlatformWithRealData(rawJobs);
 
-  // printResult(rawJobs);
+  printResult(rawJobs);
 
 // 수동크롤링 데이터베이스 insert 테스트 로직
-   const url =
-    "https://www.wanted.co.kr/wd/272068";
+  //  const url =
+  //   "https://www.wanted.co.kr/wd/308052";
 
-  const result = await saveJob(url);
+  // const result = await saveJob(url);
 
-  console.log(result);
+  // console.log(result);
 };
 
 main();

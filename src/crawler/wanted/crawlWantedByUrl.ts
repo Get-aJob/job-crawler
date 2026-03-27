@@ -32,6 +32,7 @@ export const crawlWantedByUrl = async (
       headers: {
         "User-Agent": "Mozilla/5.0",
       },
+      timeout: 10000,
     });
 
     const buildIdMatch = htmlRes.data.match(/"buildId":"([^"]+)"/);
@@ -48,6 +49,7 @@ export const crawlWantedByUrl = async (
           "User-Agent": "Mozilla/5.0",
           Referer: "https://www.wanted.co.kr/",
         },
+        timeout: 10000,
       }
     );
 

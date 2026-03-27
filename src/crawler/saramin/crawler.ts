@@ -27,6 +27,7 @@ const fetchDetail = async (recIdx: string, referer: string) => {
         "User-Agent": "Mozilla/5.0",
         "Referer": referer,
       },
+      timeout: 10000,
     });
 
     const $ = cheerio.load(data);
@@ -66,6 +67,7 @@ const fetchCompanyLogo = async (recIdx: string, referer: string) => {
         "User-Agent": "Mozilla/5.0",
         "Referer": referer,
       },
+      timeout: 10000,
     });
 
 
@@ -137,25 +139,25 @@ export const crawlSaramin = async (): Promise<CrawledJob[]> => {
         });
       }
       
-      await Promise.all(
-        jobs.map(async (job) => {
-          try {
-            const [detail, companyLogo] = await Promise.all([
-              fetchDetail(job.externalId, job.url),
-              fetchCompanyLogo(job.externalId, job.url),
-            ]);
+      for (const job of jobs) {
+        try {
+          const [detail, companyLogo] = await Promise.all([
+            fetchDetail(job.externalId, job.url),
+            fetchCompanyLogo(job.externalId, job.url),
+          ]);
 
-            if (detail?.content) job.content = detail.content;
-            if (detail?.requirements) job.requirements = detail.requirements;
-            if (detail?.preferred) job.preferred = detail.preferred;
+          if (detail?.content) job.content = detail.content;
+          if (detail?.requirements) job.requirements = detail.requirements;
+          if (detail?.preferred) job.preferred = detail.preferred;
 
-            job.companyLogo = companyLogo;
+          job.companyLogo = companyLogo;
 
-          } catch (e: any) {
-            console.error("상세 실패:", job.url, e.message);
-          }
-        })
-      );
+          // 간단한 지연 추가 (DNS 오류/IP 차단 방지)
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        } catch (e: any) {
+          console.error("상세 실패:", job.url, e.message);
+        }
+      }
 
       allJobs.push(...jobs);
 

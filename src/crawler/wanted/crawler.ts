@@ -26,13 +26,28 @@ const formatCareer = (career: any) => {
 
 const fetchWantedDetail = async (jobId: number) => {
   try {
+    const htmlRes = await axios.get(`https://www.wanted.co.kr/wd/${jobId}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
+      timeout: 10000,
+    });
+
+    const buildIdMatch = htmlRes.data.match(/"buildId":"([^"]+)"/);
+    if (!buildIdMatch) {
+      console.error("원티드 buildId 추출 실패");
+      return null;
+    }
+    const buildId = buildIdMatch[1];
+
     const res = await axios.get(
-      `https://www.wanted.co.kr/_next/data/PJ03wMHBiiyh1VQyNVrYO/wd/${jobId}.json?jobId=${jobId}`,
+      `https://www.wanted.co.kr/_next/data/${buildId}/wd/${jobId}.json?jobId=${jobId}`,
       {
         headers: {
           "User-Agent": "Mozilla/5.0",
           Referer: "https://www.wanted.co.kr/",
         },
+        timeout: 10000,
       }
     );
 
@@ -131,38 +146,41 @@ export const crawlWanted = async (): Promise<CrawledJob[]> => {
     return []; 
   }
 
-  const jobs: CrawledJob[] = await Promise.all(
-    rawJobs.map(async (item: any) => {
-      let detail = null;
+  const jobs: CrawledJob[] = [];
+  
+  for (const item of rawJobs) {
+    let detail = null;
 
-      try {
-        detail = await fetchWantedDetail(item.id);
-      } catch (e: any) {
-        console.error("상세 실패:", item.id, e.message);
-      }
+    try {
+      detail = await fetchWantedDetail(item.id);
+      
+      // Burst 방지용 지연
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    } catch (e: any) {
+      console.error("상세 실패:", item.id, e.message);
+    }
 
-      return {
-        externalId: item.id.toString(),
-        title: item.position || "",
-        company: item.company?.name || "",
-        companyLogo:
-          detail?.companyLogo || item.company?.logo_url || "",
-        location:
-          item.address?.full_location ||
-          item.address?.location ||
-          "",
-        experience:
-          detail?.experience || formatCareer(item.career),
-        deadline:
-          detail?.deadline || item.due_time || "",
-        url: `https://www.wanted.co.kr/wd/${item.id}`,
-        content: detail?.content || "",
-        requirements: detail?.requirements || "",
-        preferred: detail?.preferred || "",
-        keyword: "",
-      };
-    })
-  );
+    jobs.push({
+      externalId: item.id.toString(),
+      title: item.position || "",
+      company: item.company?.name || "",
+      companyLogo:
+        detail?.companyLogo || item.company?.logo_url || "",
+      location:
+        item.address?.full_location ||
+        item.address?.location ||
+        "",
+      experience:
+        detail?.experience || formatCareer(item.career),
+      deadline:
+        detail?.deadline || item.due_time || "",
+      url: `https://www.wanted.co.kr/wd/${item.id}`,
+      content: detail?.content || "",
+      requirements: detail?.requirements || "",
+      preferred: detail?.preferred || "",
+      keyword: "",
+    });
+  }
 
   for (const job of jobs) {
     for (const keyword of KEYWORDS) {

@@ -2,12 +2,24 @@ import { CrawledJob, JobPostingInsert } from "../../types";
 import { parseDeadline } from "./dateParser";
 
 
+const truncate = (str: string | undefined | null, length: number = 500): string => {
+  if (!str) return "";
+  return str.length > length ? str.substring(0, length) : str;
+};
+
 export const mapToJobPosting = (
   job: CrawledJob,
   source: string,
   userId: string,
   sourceType: "auto" | "manual" = "auto"
 ): JobPostingInsert => {
+  // DB 스키마 제약 사항 (Varying(500) 등) validation
+  if (job.externalId.length > 100) {
+    throw new Error(`외부 ID가 너무 깁니다: ${job.externalId}`);
+  }
+  if (job.url.length > 500) {
+    throw new Error(`원본 URL이 너무 깁니다: ${job.url}`);
+  }
 
   const contentParts: string[] = [];
 
@@ -26,20 +38,20 @@ export const mapToJobPosting = (
     source_url: job.url,
     external_id: job.externalId,
 
-    title: job.title,
-    company_name: job.company,
+    title: truncate(job.title, 500),
+    company_name: truncate(job.company, 200),
 
-    company_logo: job.companyLogo || "",
+    company_logo: job.companyLogo && job.companyLogo.length > 500 ? "" : (job.companyLogo || ""),
 
-    location: job.location,
-    experience: job.experience,
+    location: truncate(job.location, 500),
+    experience: truncate(job.experience, 200),
 
     content: contentParts.length > 0
       ? contentParts.join("\n\n")
       : null,
 
     deadline: parseDeadline(job.deadline),
-    deadline_text: job.deadline,
+    deadline_text: truncate(job.deadline, 100),
 
     crawled_at: new Date().toISOString(),
   };

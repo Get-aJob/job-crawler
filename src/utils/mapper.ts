@@ -13,6 +13,13 @@ export const mapToJobPosting = (
   userId: string,
   sourceType: "auto" | "manual" = "auto"
 ): JobPostingInsert => {
+  // DB 스키마 제약 사항 (Varying(500) 등) validation
+  if (job.externalId.length > 100) {
+    throw new Error(`외부 ID가 너무 깁니다: ${job.externalId}`);
+  }
+  if (job.url.length > 500) {
+    throw new Error(`원본 URL이 너무 깁니다: ${job.url}`);
+  }
 
   const contentParts: string[] = [];
 
@@ -28,8 +35,8 @@ export const mapToJobPosting = (
 
     source_type: sourceType,
     source_site_name: source,
-    source_url: truncate(job.url, 500),
-    external_id: truncate(job.externalId, 100),
+    source_url: job.url,
+    external_id: job.externalId,
 
     title: truncate(job.title, 500),
     company_name: truncate(job.company, 200),

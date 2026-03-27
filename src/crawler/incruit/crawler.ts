@@ -198,6 +198,7 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
 
           const res = await axios.get(job.url, {
             responseType: "arraybuffer",
+            timeout: 10000,
           });
 
           const html = iconv.decode(res.data, "euc-kr");
@@ -223,6 +224,7 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
 
             const iframeRes = await axios.get(iframeUrl, {
               responseType: "arraybuffer",
+              timeout: 10000,
             });
 
             const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");

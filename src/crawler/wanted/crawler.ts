@@ -24,7 +24,7 @@ const formatCareer = (career: any) => {
 };
 
 
-const fetchWantedDetail = async (jobId: number) => {
+const fetchWantedDetail = async (jobId: number, buildId: string) => {
   try {
     const htmlRes = await axios.get(`https://www.wanted.co.kr/wd/${jobId}`, {
       headers: {
@@ -131,14 +131,25 @@ export const crawlWanted = async (): Promise<CrawledJob[]> => {
   }
 
   const jobs: CrawledJob[] = [];
+
+  const sampleRes = await axios.get(`https://www.wanted.co.kr/wd/${rawJobs[0].id}`, {
+    headers: { "User-Agent": "Mozilla/5.0" },
+    timeout: 10000,
+  });
+  const buildIdMatch = sampleRes.data.match(/"buildId":"([^"]+)"/);
+  if (!buildIdMatch) {
+    console.error("원티드 buildId 추출 실패");
+    return [];
+  }
+  const buildId = buildIdMatch[1];
+
   
   for (const item of rawJobs) {
     let detail = null;
 
     try {
-      detail = await fetchWantedDetail(item.id);
-      
-      // Burst 방지용 지연
+      detail = await fetchWantedDetail(item.id, buildId);
+  
       await new Promise((resolve) => setTimeout(resolve, 200));
     } catch (e: any) {
       console.error("상세 실패:", item.id, e.message);

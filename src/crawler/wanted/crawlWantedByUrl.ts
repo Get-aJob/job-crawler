@@ -65,16 +65,6 @@ export const crawlWantedByUrl = async (
       deadline:
         data.close_time || data.due_time || data.confirm_time || "",
       url,
-        content: [
-            data.intro && `소개\n${data.intro}`,
-            data.main_tasks && `\n주요업무\n${data.main_tasks}`,
-            data.requirements && `\n자격요건\n${data.requirements}`,
-            data.preferred_points && `\n우대사항\n${data.preferred_points}`,
-            data.benefits && `\n복지\n${data.benefits}`,
-            data.hire_rounds && `\n채용절차\n${data.hire_rounds}`,
-        ]
-            .filter(Boolean)
-            .join("\n"),
       requirements: data.requirements || "",
       preferred: data.preferred_points || "",
       keyword: "",

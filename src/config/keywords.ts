@@ -1,5 +1,5 @@
 export const KEYWORDS = [
-    "기획",
-    "backend",
-    "경영"
+    "데이터분석",
+    "금융",
+    "디자인"
 ];

@@ -9,37 +9,16 @@ const formatCareer = (career: any) => {
   const { annual_from, annual_to, is_newbie, is_expert } = career;
 
   if (is_newbie) return "신입";
-
-  if (annual_from && annual_to) {
-    return `${annual_from}~${annual_to}년`;
-  }
-
-  if (annual_from && !annual_to) {
-    return `${annual_from}년 이상`;
-  }
-
+  if (annual_from && annual_to) return `${annual_from}~${annual_to}년`;
+  if (annual_from && !annual_to) return `${annual_from}년 이상`;
   if (is_expert) return "경력";
 
   return "";
 };
 
 
-const fetchWantedDetail = async (jobId: number) => {
+const fetchWantedDetail = async (jobId: number, buildId: string) => {
   try {
-    const htmlRes = await axios.get(`https://www.wanted.co.kr/wd/${jobId}`, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-      },
-      timeout: 10000,
-    });
-
-    const buildIdMatch = htmlRes.data.match(/"buildId":"([^"]+)"/);
-    if (!buildIdMatch) {
-      console.error("원티드 buildId 추출 실패");
-      return null;
-    }
-    const buildId = buildIdMatch[1];
-
     const res = await axios.get(
       `https://www.wanted.co.kr/_next/data/${buildId}/wd/${jobId}.json?jobId=${jobId}`,
       {
@@ -52,49 +31,14 @@ const fetchWantedDetail = async (jobId: number) => {
     );
 
     const data = res.data?.pageProps?.initialData;
-
     if (!data) return null;
 
-    const {
-      intro,
-      main_tasks,
-      requirements,
-      preferred_points,
-      hire_rounds,
-      benefits,
-      company,
-      career,
-      confirm_time,
-      close_time,
-      due_time,
-    } = data;
-
- 
-    const deadline =
-      close_time ||
-      due_time ||
-      confirm_time ||
-      "";
-
- 
-    const companyLogo = company?.logo_image || "";
-
-    const content = [
-      intro && `소개\n${intro}`,
-      main_tasks && `\n주요업무\n${main_tasks}`,
-      requirements && `\n자격요건\n${requirements}`,
-      preferred_points && `\n우대사항\n${preferred_points}`,
-      benefits && `\n복지\n${benefits}`,
-      hire_rounds && `\n채용절차\n${hire_rounds}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
+    const { requirements, preferred_points, company, career, confirm_time, close_time, due_time } = data;
 
     return {
       experience: formatCareer(career),
-      deadline,
-      companyLogo,
-      content,
+      deadline: close_time || due_time || confirm_time || "",
+      companyLogo: company?.logo_image || "",
       requirements: requirements || "",
       preferred: preferred_points || "",
     };
@@ -104,92 +48,77 @@ const fetchWantedDetail = async (jobId: number) => {
   }
 };
 
-const isMatched = (job: CrawledJob, keyword: string) => {
-  const text = `
-    ${job.title}
-    ${job.content || ""}
-    ${job.requirements || ""}
-    ${job.preferred || ""}
-  `.toLowerCase();
-
-  return text.includes(keyword.toLowerCase());
-};
 
 export const crawlWanted = async (): Promise<CrawledJob[]> => {
   const allJobs: CrawledJob[] = [];
 
-  let rawJobs: any[] = [];
-
+  // buildId 홈페이지에서 한 번만 추출
+  let buildId: string;
   try {
-    const response = await axios.get(
-      "https://www.wanted.co.kr/api/chaos/navigation/v1/results",
-      {
-        params: {
-          country: "kr",
-          job_sort: "job.popularity_order",
-          years: -1,
-          locations: "all",
-          limit: 50,
-          offset: 0,
-        },
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          Referer: "https://www.wanted.co.kr/",
-        },
-      }
-    );
-
-    rawJobs = response.data?.data || [];
-
-  } catch (error: any) {
-    console.error("원티드 API 실패:", error.message);
-    return []; 
-  }
-
-  const jobs: CrawledJob[] = [];
-  
-  for (const item of rawJobs) {
-    let detail = null;
-
-    try {
-      detail = await fetchWantedDetail(item.id);
-      
-      // Burst 방지용 지연
-      await new Promise((resolve) => setTimeout(resolve, 200));
-    } catch (e: any) {
-      console.error("상세 실패:", item.id, e.message);
-    }
-
-    jobs.push({
-      externalId: item.id.toString(),
-      title: item.position || "",
-      company: item.company?.name || "",
-      companyLogo:
-        detail?.companyLogo || item.company?.logo_url || "",
-      location:
-        item.address?.full_location ||
-        item.address?.location ||
-        "",
-      experience:
-        detail?.experience || formatCareer(item.career),
-      deadline:
-        detail?.deadline || item.due_time || "",
-      url: `https://www.wanted.co.kr/wd/${item.id}`,
-      content: detail?.content || "",
-      requirements: detail?.requirements || "",
-      preferred: detail?.preferred || "",
-      keyword: "",
+    const sampleRes = await axios.get("https://www.wanted.co.kr/", {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      timeout: 10000,
     });
+    const buildIdMatch = sampleRes.data.match(/"buildId":"([^"]+)"/);
+    if (!buildIdMatch) {
+      console.error("원티드 buildId 추출 실패");
+      return [];
+    }
+    buildId = buildIdMatch[1];
+  } catch (e: any) {
+    console.error("원티드 buildId 요청 실패:", e.message);
+    return [];
   }
 
-  for (const job of jobs) {
-    for (const keyword of KEYWORDS) {
-      if (isMatched(job, keyword)) {
+  for (const keyword of KEYWORDS) {
+    try {
+      const response = await axios.get(
+        "https://www.wanted.co.kr/api/chaos/search/v1/position",
+        {
+          params: {
+            query: keyword,
+            country: "kr",
+            years: -1,
+            locations: "all",
+            sort: "job.recommend_order",
+            limit: 20,
+            offset: 0,
+          },
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            Referer: "https://www.wanted.co.kr/",
+          },
+        }
+      );
+
+      const rawJobs: any[] = response.data?.data || [];
+
+      for (const item of rawJobs) {
+        let detail = null;
+        try {
+          detail = await fetchWantedDetail(item.id, buildId);
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        } catch (e: any) {
+          console.error("상세 실패:", item.id, e.message);
+        }
+
         allJobs.push({
-          ...job,
+          externalId: item.id.toString(),
+          title: item.position || "",
+          company: item.company?.name || "",
+          companyLogo: detail?.companyLogo || "",
+          location: item.address?.full_location || item.address?.location || "",
+          experience: detail?.experience || "",
+          deadline: detail?.deadline || "",
+          url: `https://www.wanted.co.kr/wd/${item.id}`,
+          requirements: detail?.requirements || "",
+          preferred: detail?.preferred || "",
           keyword,
         });
       }
+
+    } catch (error: any) {
+      console.error(`원티드 키워드 실패: ${keyword}`, error.message);
     }
   }
 

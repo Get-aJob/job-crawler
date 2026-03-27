@@ -192,67 +192,65 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
         });
       });
 
-      await Promise.all(
-        jobs.map(async (job) => {
-          try {
-            await delay(200);
+      for (const job of jobs) {
+        try {
+          await delay(200);
 
-            const res = await axios.get(job.url, {
+          const res = await axios.get(job.url, {
+            responseType: "arraybuffer",
+          });
+
+          const html = iconv.decode(res.data, "euc-kr");
+          const $ = cheerio.load(html);
+
+          let logo = "";
+          const logoSrc = $(".jcinfo_logo img").attr("src");
+
+          if (logoSrc) {
+            logo = logoSrc.startsWith("http")
+              ? logoSrc
+              : `https:${logoSrc}`;
+          }
+
+          const iframeSrc = $("iframe[src*='jobpostcont']").attr("src");
+
+          let rawText = "";
+
+          if (iframeSrc) {
+            const iframeUrl = iframeSrc.startsWith("http")
+              ? iframeSrc
+              : `https://job.incruit.com${iframeSrc}`;
+
+            const iframeRes = await axios.get(iframeUrl, {
               responseType: "arraybuffer",
             });
 
-            const html = iconv.decode(res.data, "euc-kr");
-            const $ = cheerio.load(html);
+            const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
+            const $$ = cheerio.load(iframeHtml);
 
-            let logo = "";
-            const logoSrc = $(".jcinfo_logo img").attr("src");
-
-            if (logoSrc) {
-              logo = logoSrc.startsWith("http")
-                ? logoSrc
-                : `https:${logoSrc}`;
-            }
-
-            const iframeSrc = $("iframe[src*='jobpostcont']").attr("src");
-
-            let rawText = "";
-
-            if (iframeSrc) {
-              const iframeUrl = iframeSrc.startsWith("http")
-                ? iframeSrc
-                : `https://job.incruit.com${iframeSrc}`;
-
-              const iframeRes = await axios.get(iframeUrl, {
-                responseType: "arraybuffer",
-              });
-
-              const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
-              const $$ = cheerio.load(iframeHtml);
-
-              rawText = $$("body").text();
-            } else {
-              rawText = $("body").text();
-            }
-
-            const parsed = parseJobContent(rawText);
-
-            job.requirements = parsed.requirements;
-            job.preferred = parsed.preferred;
-            job.companyLogo = logo;
-
-            job.content = [
-              parsed.requirements,
-              parsed.preferred,
-              parsed.fallback,
-            ]
-              .filter(Boolean)
-              .join("\n\n");
-
-          } catch (e: any) {
-            console.error("상세 실패:", job.url, e.message);
+            rawText = $$("body").text();
+          } else {
+            rawText = $("body").text();
           }
-        })
-      );
+
+          const parsed = parseJobContent(rawText);
+
+          job.requirements = parsed.requirements;
+          job.preferred = parsed.preferred;
+          job.companyLogo = logo;
+
+          job.content = [
+            parsed.requirements,
+            parsed.preferred,
+            parsed.fallback,
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+
+        } catch (e: any) {
+          console.error("상세 실패:", job.url, e.message);
+        }
+      }
 
       allJobs.push(...jobs);
 

@@ -28,8 +28,21 @@ export const crawlWantedByUrl = async (
   try {
     const jobId = extractExternalId(url, "wanted");
 
+    const htmlRes = await axios.get(`https://www.wanted.co.kr/wd/${jobId}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
+    });
+
+    const buildIdMatch = htmlRes.data.match(/"buildId":"([^"]+)"/);
+    if (!buildIdMatch) {
+      console.error("원티드 buildId 추출 실패");
+      return null;
+    }
+    const buildId = buildIdMatch[1];
+
     const res = await axios.get(
-      `https://www.wanted.co.kr/_next/data/PJ03wMHBiiyh1VQyNVrYO/wd/${jobId}.json?jobId=${jobId}`,
+      `https://www.wanted.co.kr/_next/data/${buildId}/wd/${jobId}.json?jobId=${jobId}`,
       {
         headers: {
           "User-Agent": "Mozilla/5.0",

@@ -2,6 +2,11 @@ import { CrawledJob, JobPostingInsert } from "../../types";
 import { parseDeadline } from "./dateParser";
 
 
+const truncate = (str: string | undefined | null, length: number = 500): string => {
+  if (!str) return "";
+  return str.length > length ? str.substring(0, length) : str;
+};
+
 export const mapToJobPosting = (
   job: CrawledJob,
   source: string,
@@ -23,23 +28,23 @@ export const mapToJobPosting = (
 
     source_type: sourceType,
     source_site_name: source,
-    source_url: job.url,
-    external_id: job.externalId,
+    source_url: truncate(job.url, 500),
+    external_id: truncate(job.externalId, 100),
 
-    title: job.title,
-    company_name: job.company,
+    title: truncate(job.title, 500),
+    company_name: truncate(job.company, 200),
 
-    company_logo: job.companyLogo || "",
+    company_logo: job.companyLogo && job.companyLogo.length > 500 ? "" : (job.companyLogo || ""),
 
-    location: job.location,
-    experience: job.experience,
+    location: truncate(job.location, 500),
+    experience: truncate(job.experience, 200),
 
     content: contentParts.length > 0
       ? contentParts.join("\n\n")
       : null,
 
     deadline: parseDeadline(job.deadline),
-    deadline_text: job.deadline,
+    deadline_text: truncate(job.deadline, 100),
 
     crawled_at: new Date().toISOString(),
   };

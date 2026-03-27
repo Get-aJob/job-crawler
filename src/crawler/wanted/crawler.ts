@@ -56,12 +56,8 @@ const fetchWantedDetail = async (jobId: number) => {
     if (!data) return null;
 
     const {
-      intro,
-      main_tasks,
       requirements,
       preferred_points,
-      hire_rounds,
-      benefits,
       company,
       career,
       confirm_time,
@@ -79,22 +75,11 @@ const fetchWantedDetail = async (jobId: number) => {
  
     const companyLogo = company?.logo_image || "";
 
-    const content = [
-      intro && `소개\n${intro}`,
-      main_tasks && `\n주요업무\n${main_tasks}`,
-      requirements && `\n자격요건\n${requirements}`,
-      preferred_points && `\n우대사항\n${preferred_points}`,
-      benefits && `\n복지\n${benefits}`,
-      hire_rounds && `\n채용절차\n${hire_rounds}`,
-    ]
-      .filter(Boolean)
-      .join("\n");
 
     return {
       experience: formatCareer(career),
       deadline,
       companyLogo,
-      content,
       requirements: requirements || "",
       preferred: preferred_points || "",
     };
@@ -107,7 +92,6 @@ const fetchWantedDetail = async (jobId: number) => {
 const isMatched = (job: CrawledJob, keyword: string) => {
   const text = `
     ${job.title}
-    ${job.content || ""}
     ${job.requirements || ""}
     ${job.preferred || ""}
   `.toLowerCase();
@@ -175,7 +159,6 @@ export const crawlWanted = async (): Promise<CrawledJob[]> => {
       deadline:
         detail?.deadline || item.due_time || "",
       url: `https://www.wanted.co.kr/wd/${item.id}`,
-      content: detail?.content || "",
       requirements: detail?.requirements || "",
       preferred: detail?.preferred || "",
       keyword: "",

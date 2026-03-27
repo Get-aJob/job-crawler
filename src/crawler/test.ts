@@ -91,7 +91,8 @@ keywords: ${job.keywords.join(", ")}
 location: ${job.location}
 experience: ${job.experience}
 logo: ${job.companyLogo || "없음"}
-content: ${job.content?.slice(0, 200) || "❌ 없음"}
+requirements: ${job.requirements?.slice(0, 100) || "❌ 없음"}
+preferred: ${job.preferred?.slice(0, 100) || "❌ 없음"}
 url: ${job.url}
     `);
   });
@@ -121,7 +122,7 @@ const testDetectPlatformWithRealData = (jobs: CrawledJob[]) => {
 const testIntegratedCrawl = async () => {
   console.log("\n 수동 크롤링 테스트\n");
 
-  const url = "https://job.incruit.com/jobdb_info/popupjobpost.asp?job=2603180001063&inOut=In";
+  const url = "https://www.wanted.co.kr/wd/272068";
 
   const job = await crawlJobByUrl(url);
 
@@ -129,16 +130,22 @@ const testIntegratedCrawl = async () => {
 };
 
 const main = async () => {
-  //await testIntegratedCrawl()
-  // const SOURCE: Source = "wanted"; 
+
+
+ // await testIntegratedCrawl()
+
+
+  //  const SOURCE: Source = "wanted"; 
 
   // const rawJobs = await runCrawler(SOURCE);
 
-  // testDetectPlatformWithRealData(rawJobs);
+  //  testDetectPlatformWithRealData(rawJobs);
 
   // printResult(rawJobs);
+
+
    const url =
-    "https://job.incruit.com/jobdb_info/popupjobpost.asp?job=2603250000324&inOut=In";
+    "https://www.wanted.co.kr/wd/272068";
 
   const result = await saveJob(url);
 

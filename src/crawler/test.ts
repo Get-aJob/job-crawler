@@ -135,7 +135,7 @@ const main = async () => {
  //await testIntegratedCrawl()
 
 //자동크롤링 테스트 로직
-   const SOURCE: Source = "wanted"; 
+   const SOURCE: Source = "saramin"; 
 
   const rawJobs = await runCrawler(SOURCE);
 

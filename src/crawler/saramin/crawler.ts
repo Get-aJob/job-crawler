@@ -96,12 +96,13 @@ export const crawlSaramin = async (): Promise<CrawledJob[]> => {
 
   for (const keyword of KEYWORDS) {
     try {
-      const URL = `https://www.saramin.co.kr/zf_user/search?searchword=${encodeURIComponent(keyword)}`;
+      const searchURL = `https://www.saramin.co.kr/zf_user/search?searchword=${encodeURIComponent(keyword)}`;
 
-      const { data } = await axios.get(URL, {
+      const { data } = await axios.get(searchURL, {
         headers: {
           "User-Agent": "Mozilla/5.0",
         },
+        timeout: 10000,
       });
 
       const $ = cheerio.load(data);
@@ -150,9 +151,8 @@ export const crawlSaramin = async (): Promise<CrawledJob[]> => {
           if (detail?.requirements) job.requirements = detail.requirements;
           if (detail?.preferred) job.preferred = detail.preferred;
 
-          job.companyLogo = companyLogo;
+          job.companyLogo = companyLogo ?? "";
 
-          // 간단한 지연 추가 (DNS 오류/IP 차단 방지)
           await new Promise((resolve) => setTimeout(resolve, 300));
         } catch (e: any) {
           console.error("상세 실패:", job.url, e.message);

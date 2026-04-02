@@ -10,7 +10,7 @@ const extractSection = (
 ) => {
   for (const keyword of keywords) {
     const regex = new RegExp(
-      `${keyword}(?!\\s*및)([\\s\\S]*?)(?=${stopKeywords.join("|")}|$)`
+      `${keyword}(?!\\s*및)\\s*([ㆍ•·][\\s\\S]*?)(?=${stopKeywords.join("|")}|$)`
     );
     const match = text.match(regex);
     if (match?.[1]) return match[1].trim();
@@ -46,7 +46,7 @@ const fetchDetail = async (recIdx: string, referer: string) => {
       preferred: extractSection(
         rawContent,
         ["우대사항"],
-        ["복지", "근무", "마감"]
+        ["자격요건", "복지", "근무", "마감"]
       ),
     };
   } catch {

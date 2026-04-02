@@ -122,7 +122,7 @@ const testDetectPlatformWithRealData = (jobs: CrawledJob[]) => {
 const testIntegratedCrawl = async () => {
   console.log("\n 수동 크롤링 테스트\n");
 
-  const url = "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=search&rec_idx=52300696&location=ts&searchword=%EB%94%94%EC%9E%90%EC%9D%B8&searchType=search&paid_fl=n&search_uuid=c16f1a24-24fa-45a6-b6f6-8c8897ab2fc3&t_ref=search&t_ref_content=generic#seq=0";
+  const url = "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=search&rec_idx=53451284&searchword=%EB%94%94%EC%9E%90%EC%9D%B8&searchType=search&paid_fl=y&t_ref=search&t_ref_content=keyword_logo_recruiter#seq=0";
 
   const job = await crawlJobByUrl(url);
 

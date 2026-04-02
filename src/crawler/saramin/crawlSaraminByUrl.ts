@@ -28,6 +28,7 @@ const fetchDetail = async (recIdx: string, referer: string) => {
           "User-Agent": "Mozilla/5.0",
           Referer: referer,
         },
+        timeout: 10000,
       }
     );
 
@@ -65,6 +66,7 @@ const fetchCompanyLogo = async (recIdx: string, referer: string) => {
           "User-Agent": "Mozilla/5.0",
           Referer: referer,
         },
+        timeout: 10000,
       }
     );
 
@@ -102,6 +104,7 @@ const fetchFromSearch = async (recIdx: string) => {
       headers: {
         "User-Agent": "Mozilla/5.0",
       },
+      timeout: 10000,
     });
 
     const $ = cheerio.load(data);

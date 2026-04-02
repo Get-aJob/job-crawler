@@ -48,7 +48,7 @@ const fetchDetail = async (recIdx: string, referer: string) => {
       preferred: extractSection(
         rawContent,
         ["우대사항", "우대 사항"],
-        ["자격요건", "자격 요건", "복지", "근무", "마감"]
+        ["자격요건", "자격 요건", "지원자격", "필수사항", "복지", "근무", "마감"]
       ),
     };
   } catch {

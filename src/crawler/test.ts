@@ -145,7 +145,7 @@ const main = async () => {
 
 // 수동크롤링 데이터베이스 insert 테스트 로직
    const url =
-    "https://www.saramin.co.kr/zf_user/jobs/relay/view?isMypage=no&rec_idx=53478687&recommend_ids=eJxFx8ENACAIA8CZoC3YaVzE4U2MxvudkBVOzhG9BDoS%2FQKydQNXqX7okw3ovQ8p&view_type=search&rec_scn_id=817&referPage=y&refDpId=SRI_050_VIEW_MIX_RCT_NONMEM&gz=1&t_ref_scnid=817&refer=y&inner_source=saramin&inner_medium=pattern&inner_campaign=non-logged_relay_view_1&inner_term=search&referNonce=c212c55c874b2343fca8&relayNonce=c212c55c874b2343fca8&dpId=SRI_050_VIEW_MIX_RCT_NONMEM&immediately_apply_layer_open=n#seq=0";
+    "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=search&rec_idx=53434448&searchword=%EB%94%94%EC%9E%90%EC%9D%B8&searchType=search&paid_fl=y&t_ref=search&t_ref_content=keyword_logo_recruiter#seq=0";
 
   const result = await saveJob(url);
 

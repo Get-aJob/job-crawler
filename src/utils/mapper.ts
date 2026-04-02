@@ -48,7 +48,8 @@ export const mapToJobPosting = (
 
     content: contentParts.length > 0
       ? contentParts.join("\n\n")
-      : null,
+      : (job.content || null),
+
 
     deadline: parseDeadline(job.deadline),
     deadline_text: truncate(job.deadline, 100),

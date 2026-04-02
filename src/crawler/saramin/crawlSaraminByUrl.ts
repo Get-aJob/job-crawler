@@ -156,8 +156,8 @@ export const crawlSaraminByUrl = async (
     const titleMatch = pageTitle.match(/\[.+?\]\s*(.+?)\s*(?:\(D-\d+\))?\s*-\s*사람인/);
     const metaTitle = titleMatch?.[1] || "";
     const metaCompany = metaParts[0] || "";
-    const metaExperience = metaParts.find(p => p.startsWith("경력:"))?.replace("경력:", "") || "";
-    const metaDeadline = metaParts.find(p => p.startsWith("마감일:"))?.replace("마감일:", "") || "";
+    const metaExperience = metaParts.find(p => p.startsWith("경력:"))?.replace("경력:", "").trim() || "";
+    const metaDeadline = metaParts.find(p => p.startsWith("마감일:"))?.replace("마감일:", "").trim() || "";
     
 
 let title =

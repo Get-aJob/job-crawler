@@ -202,10 +202,12 @@ export const crawlIncruitByUrl = async (
     const normalized = normalizeContent(rawText);
     const parsed = parseJobContent(normalized);
 
-    const requirements =
+    const rawRequirements =
       parsed.requirements ||
       normalized.match(/(자격요건|지원자격)([\s\S]*?)(우대|조건|$)/)?.[2] ||
       "";
+
+      const requirements = rawRequirements.length > 500 ? "" : rawRequirements;
 
     const preferred =
       parsed.preferred ||
@@ -219,9 +221,9 @@ export const crawlIncruitByUrl = async (
       /(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/
     );
 
-    const experienceMatch = infoText.match(
-      /(경력\s?\d+~\d+년|신입|경력)/
-    );
+    const experienceMatch =
+      infoText.match(/(경력\s?\d+~\d+년|신입무관|신입|경력무관|경력|인턴)/) ||
+      normalized.match(/(경력\s?\d+~\d+년|신입무관|신입|경력무관|경력|인턴)/);
 
     const deadlineRaw =
       $(".dday, .date, .jcinfo_date")
@@ -234,7 +236,7 @@ export const crawlIncruitByUrl = async (
     const content = [
       requirements && `자격요건\n${requirements}`,
       preferred && `우대사항\n${preferred}`,
-      (!requirements && !preferred) && `상세내용\n${normalized.slice(0, 1000)}`,
+      (!requirements && !preferred) && `상세내용\n${normalized.slice(0, 2000)}`,
     ]
       .filter(Boolean)
       .join("\n\n");

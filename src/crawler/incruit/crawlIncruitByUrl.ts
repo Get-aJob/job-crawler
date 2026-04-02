@@ -7,6 +7,7 @@ import { CrawledJob } from "../../../types";
 
 const cleanText = (text: string): string => {
   return text
+    .replace(/^\s*[\]}\[{>]+\s*/gm, "")
     .replace(/\s+/g, " ")
     .replace(/우리 회사를.*?소개해주세요/g, "")
     .replace(/안녕하세요.*?연락드렸습니다\./g, "")
@@ -18,6 +19,7 @@ const cleanText = (text: string): string => {
     .replace(/\*.*?\*/g, "")
     .replace(/\{.*?\}/g, "")
     .replace(/\|/g, " ")
+    .replace(/(?<![A-Za-z0-9])\$(?![A-Za-z0-9])/g, "")
     .trim();
 };
 
@@ -71,16 +73,17 @@ const splitSections = (text: string) => {
     {
       key: "requirements",
       regex:
-        /(자격\s?요건|지원\s?자격)([\s\S]*?)(우대\s?사항|우대\s?조건|근무\s?조건|$)/,
+        /(자격\s?요건|지원\s?자격|\[자격\s?요건[^\]]*\])([\s\S]*?)(우대\s?사항|우대\s?조건|우대\s?내용|기타\s?우대|근무\s?조건|근무\s?시간|급여\s?조건|급여\s?수준|전형\s?단계|전형\s?방법|전형\s?절차|제출\s?서류|접수\s?방법|고용\s?형태|유의\s?사항|$)/,
       keyword: "자격요건",
     },
     {
       key: "preferred",
       regex:
-        /(우대\s?사항|우대\s?조건)([\s\S]*?)(자격\s?요건|근무\s?조건|$)/,
+        /(우대\s?사항|우대\s?조건|우대\s?내용|기타\s?우대|\[우대\s?사항[^\]]*\])([\s\S]*?)(자격\s?요건|담당\s?업무|근무\s?조건|전형\s?단계|전형\s?방법|전형\s?절차|제출\s?서류|접수\s?방법|고용\s?형태|유의\s?사항|$)/,
       keyword: "우대사항",
     },
   ];
+
 
   for (const { key, regex, keyword } of patterns) {
     const match = normalize.match(regex);
@@ -157,9 +160,18 @@ export const crawlIncruitByUrl = async (
       $("meta[property='og:site_name']").attr("content") ||
       "";
 
-      if (company && title.startsWith(company)) {
-        title = title.slice(company.length).trim();
-      }
+      const companyShort = company
+    .replace(/^\(주\)|^주식회사\s*|^\(사\)|^\(유\)/g, "")
+    .replace(/\(주\)$|\(사\)$|\(유\)$/g, "")
+    .trim();
+
+    if (company && title.startsWith(company)) {
+      title = title.slice(company.length).trim();
+    } else if (companyShort && title.startsWith(companyShort)) {
+      title = title.slice(companyShort.length).trim();
+    }
+
+    title = title.replace(new RegExp(`^\\[${companyShort}\\]\\s*`), "").trim();
 
     let logo = "";
     const logoSrc = $(".jcinfo_logo img").attr("src");
@@ -207,23 +219,32 @@ export const crawlIncruitByUrl = async (
       normalized.match(/(자격요건|지원자격)([\s\S]*?)(우대|조건|$)/)?.[2] ||
       "";
 
-      const requirements = rawRequirements.length > 500 ? "" : rawRequirements;
+    const cleanSection = (text: string) =>
+      text
+        .replace(/^[^\[\]\n]*\]\s*/gm, "")
+        .replace(/^[\-\]}\[{>:\s]+/gm, "")
+        .trim();
 
-    const preferred =
+
+    const requirements = cleanSection(rawRequirements.length > 500 ? "" : rawRequirements);
+
+    const preferred = cleanSection(
       parsed.preferred ||
       normalized.match(/(우대사항|우대조건)([\s\S]*?)(자격|조건|$)/)?.[2] ||
-      "";
-
-    const infoText =
-      $(".jcinfo_detail, .jcinfo_list, .tb_detail").text();
-
-    const locationMatch = infoText.match(
-      /(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/
+      ""
     );
 
+    const infoText = $(".jcinfo_detail, .jcinfo_list, .tb_detail").text();
+    const infoTextFallback = $("ul.jc_list").text();
+
+    const locationMatch =
+      infoText.match(/(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/) ||
+      infoTextFallback.match(/(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/);
+
     const experienceMatch =
-      infoText.match(/(경력\s?\d+~\d+년|신입무관|신입|경력무관|경력|인턴)/) ||
-      normalized.match(/(경력\s?\d+~\d+년|신입무관|신입|경력무관|경력|인턴)/);
+      infoText.match(/(경력\s?\d+~\d+년|신입무관|경력무관|신입|인턴|경력)/) ||
+      normalized.match(/(경력\s?\d+~\d+년|신입무관|경력무관|신입|인턴|경력)/);
+
 
     const deadlineRaw =
       $(".dday, .date, .jcinfo_date")

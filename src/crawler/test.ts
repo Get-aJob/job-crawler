@@ -122,7 +122,7 @@ const testDetectPlatformWithRealData = (jobs: CrawledJob[]) => {
 const testIntegratedCrawl = async () => {
   console.log("\n 수동 크롤링 테스트\n");
 
-  const url = "https://job.incruit.com/jobdb_info/popupjobpost.asp?job=2603300001144&inOut=In";
+  const url = "https://job.incruit.com/jobdb_info/jobpost.asp?job=2603270000094";
 
   const job = await crawlJobByUrl(url);
 
@@ -132,20 +132,20 @@ const testIntegratedCrawl = async () => {
 const main = async () => {
 
 //수동 크롤링 테스트 로직
-await testIntegratedCrawl()
+//await testIntegratedCrawl()
 
 //자동크롤링 테스트 로직
-  //  const SOURCE: Source = "saramin"; 
+   const SOURCE: Source = "incruit"; 
 
-  // const rawJobs = await runCrawler(SOURCE);
+  const rawJobs = await runCrawler(SOURCE);
 
-  //  testDetectPlatformWithRealData(rawJobs);
+   testDetectPlatformWithRealData(rawJobs);
 
-  // printResult(rawJobs);
+  printResult(rawJobs);
 
 // 수동크롤링 데이터베이스 insert 테스트 로직
   //  const url =
-  //   "https://job.incruit.com/jobdb_info/popupjobpost.asp?job=2603300001144&inOut=In";
+  //   "https://job.incruit.com/jobdb_info/jobpost.asp?job=2603180000534&src=gsw*search";
 
   // const result = await saveJob(url);
 

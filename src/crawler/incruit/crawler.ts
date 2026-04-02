@@ -12,6 +12,7 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 const cleanText = (text: string): string => {
   return text
+    .replace(/^\s*[\]}\[{>]+\s*/gm, "")
     .replace(/\s+/g, " ")
     .replace(/우리 회사를.*?소개해주세요/g, "")
     .replace(/안녕하세요.*?연락드렸습니다\./g, "")
@@ -23,6 +24,7 @@ const cleanText = (text: string): string => {
     .replace(/\*.*?\*/g, "")
     .replace(/\{.*?\}/g, "")
     .replace(/\|/g, " ")
+    .replace(/(?<![A-Za-z0-9])\$(?![A-Za-z0-9])/g, "")
     .trim();
 };
 
@@ -62,13 +64,13 @@ const splitSections = (text: string) => {
     {
       key: "requirements",
       regex:
-        /(자격\s?요건|지원\s?자격)([\s\S]*?)(우대\s?사항|우대\s?조건|근무\s?조건|$)/,
+        /(자격\s?요건|지원\s?자격|\[자격\s?요건[^\]]*\])([\s\S]*?)(우대\s?사항|우대\s?조건|우대\s?내용|기타\s?우대|근무\s?조건|근무\s?시간|급여\s?조건|급여\s?수준|기타\s?안내|전형\s?단계|전형\s?방법|전형\s?절차|제출\s?서류|접수\s?방법|고용\s?형태|유의\s?사항|$)/,
       keyword: "자격요건",
     },
     {
       key: "preferred",
       regex:
-        /(우대\s?사항|우대\s?조건)([\s\S]*?)(자격\s?요건|근무\s?조건|$)/,
+        /(우대\s?사항|우대\s?조건|우대\s?내용|기타\s?우대|\[우대\s?사항[^\]]*\])([\s\S]*?)(자격\s?요건|담당\s?업무|근무\s?조건|기타\s?안내|전형\s?단계|전형\s?방법|전형\s?절차|제출\s?서류|접수\s?방법|고용\s?형태|유의\s?사항|$)/,
       keyword: "우대사항",
     },
   ];
@@ -148,7 +150,8 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
           ? link
           : `https://job.incruit.com${link}`;
 
-        const company = $(el).find(".cell_first a").text().trim();
+        const company = $(el).find(".cell_first a").text().replace(/\s+/g, " ").trim();
+
 
         const conditionText = $(el)
           .find(".cell_mid")
@@ -230,24 +233,37 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
             const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
             const $$ = cheerio.load(iframeHtml);
 
+            $$("style, script").remove();
             rawText = $$("body").text();
           } else {
+            $("style, script").remove();
             rawText = $("body").text();
           }
 
-          const parsed = parseJobContent(rawText);
+        const parsed = parseJobContent(rawText);
 
-          job.requirements = parsed.requirements;
-          job.preferred = parsed.preferred;
-          job.companyLogo = logo;
+        const cleanSection = (text: string) =>
+          text
+            .replace(/^[^\[\]\n]*\]\s*/gm, "")
+            .replace(/^[\-\]}\[{>:\s]+/gm, "")
+            .trim();
 
-          job.content = [
-            parsed.requirements,
-            parsed.preferred,
-            parsed.fallback,
-          ]
-            .filter(Boolean)
-            .join("\n\n");
+        const rawRequirements = parsed.requirements;
+        const requirements = cleanSection(rawRequirements.length > 500 ? "" : rawRequirements);
+        const preferred = cleanSection(parsed.preferred);
+
+        job.requirements = requirements;
+        job.preferred = preferred;
+        job.companyLogo = logo;
+
+        job.content = [
+          requirements && `자격요건\n${requirements}`,
+          preferred && `우대사항\n${preferred}`,
+          (!requirements && !preferred) && `상세내용\n${parsed.fallback}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+
 
         } catch (e: any) {
           console.error("상세 실패:", job.url, e.message);

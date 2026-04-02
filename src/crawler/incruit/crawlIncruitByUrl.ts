@@ -4,7 +4,6 @@ import iconv from "iconv-lite";
 import { extractExternalId } from "../../utils/extractExternalId";
 import { CrawledJob } from "../../../types";
 
-/* -------------------- 텍스트 유틸 -------------------- */
 
 const cleanText = (text: string): string => {
   return text
@@ -42,8 +41,6 @@ const cleanTitle = (title: string) => {
     .replace(/\s*채용\s*:\s*/, "")
     .trim();
 };
-
-/* -------------------- 파싱 유틸 -------------------- */
 
 const trimBeforeKeyword = (text: string, keyword: string) => {
   const idx = text.indexOf(keyword);
@@ -133,7 +130,6 @@ const parseJobContent = (rawText: string) => {
   };
 };
 
-/* -------------------- 메인 크롤러 -------------------- */
 
 export const crawlIncruitByUrl = async (
   url: string
@@ -149,20 +145,18 @@ export const crawlIncruitByUrl = async (
     const html = iconv.decode(response.data, "euc-kr");
     const $ = cheerio.load(html);
 
-    /* -------- 기본 정보 -------- */
-
     const titleRaw =
       $(".jcinfo_tit").text().trim() ||
       $("title").text().trim();
 
     const title = cleanTitle(titleRaw);
-
     const company =
       $(".jcinfo_top a").first().text().trim() ||
       $(".jcinfo_top").text().trim() ||
       $(".cpname").text().trim() ||
       $("meta[property='og:site_name']").attr("content") ||
       "";
+      
 
     let logo = "";
     const logoSrc = $(".jcinfo_logo img").attr("src");
@@ -171,8 +165,6 @@ export const crawlIncruitByUrl = async (
         ? logoSrc
         : `https:${logoSrc}`;
     }
-
-    /* -------- iframe 처리 -------- */
 
     const iframeSrc =
       $("iframe[src*='jobpostcont']").attr("src") ||
@@ -192,16 +184,17 @@ export const crawlIncruitByUrl = async (
       const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
       const $$ = cheerio.load(iframeHtml);
 
+      $$("style, script").remove();
+
       rawText =
         $$(".job_cont, .jobview, #job_detail, .content, .view_cont, .detail_view").text() ||
         $$("body").text();
     } else {
+      $("style, script").remove();
       rawText =
         $(".job_cont, .jobview, #job_detail, .content, .view_cont, .detail_view").text() ||
         $("body").text();
     }
-
-    /* -------- 본문 정제 -------- */
 
     const normalized = normalizeContent(rawText);
     const parsed = parseJobContent(normalized);
@@ -215,8 +208,6 @@ export const crawlIncruitByUrl = async (
       parsed.preferred ||
       normalized.match(/(우대사항|우대조건)([\s\S]*?)(자격|조건|$)/)?.[2] ||
       "";
-
-    /* -------- 기타 정보 -------- */
 
     const infoText =
       $(".jcinfo_detail, .jcinfo_list, .tb_detail").text();
@@ -236,8 +227,6 @@ export const crawlIncruitByUrl = async (
         .filter(Boolean);
 
     const deadline = [...new Set(deadlineRaw)].join("");
-
-    /* -------- content -------- */
 
     const content = [
       requirements && `자격요건\n${requirements}`,

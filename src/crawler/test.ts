@@ -135,21 +135,21 @@ const main = async () => {
 //await testIntegratedCrawl()
 
 //자동크롤링 테스트 로직
-  //  const SOURCE: Source = "saramin"; 
+   const SOURCE: Source = "saramin"; 
 
-  // const rawJobs = await runCrawler(SOURCE);
+  const rawJobs = await runCrawler(SOURCE);
 
-  //  testDetectPlatformWithRealData(rawJobs);
+   testDetectPlatformWithRealData(rawJobs);
 
-  // printResult(rawJobs);
+  printResult(rawJobs);
 
 // 수동크롤링 데이터베이스 insert 테스트 로직
-   const url =
-    "https://www.saramin.co.kr/zf_user/jobs/relay/view?isMypage=no&rec_idx=53478687&recommend_ids=eJxFx8ENACAIA8CZoC3YaVzE4U2MxvudkBVOzhG9BDoS%2FQKydQNXqX7okw3ovQ8p";
+  //  const url =
+  //   "https://www.saramin.co.kr/zf_user/jobs/relay/view?isMypage=no&rec_idx=53478687&recommend_ids=eJxFx8ENACAIA8CZoC3YaVzE4U2MxvudkBVOzhG9BDoS%2FQKydQNXqX7okw3ovQ8p";
 
-  const result = await saveJob(url);
+  // const result = await saveJob(url);
 
-  console.log(result);
+  // console.log(result);
 };
 
 main();

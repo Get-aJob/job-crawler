@@ -149,15 +149,18 @@ export const crawlIncruitByUrl = async (
       $(".jcinfo_tit").text().trim() ||
       $("title").text().trim();
 
-    const title = cleanTitle(titleRaw);
+    let title = cleanTitle(titleRaw);
     const company =
       $(".jcinfo_top a").first().text().trim() ||
       $(".jcinfo_top").text().trim() ||
       $(".cpname").text().trim() ||
       $("meta[property='og:site_name']").attr("content") ||
       "";
-      
 
+      if (company && title.startsWith(company)) {
+        title = title.slice(company.length).trim();
+      }
+      
     let logo = "";
     const logoSrc = $(".jcinfo_logo img").attr("src");
     if (logoSrc) {

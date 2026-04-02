@@ -138,6 +138,7 @@ export const crawlSaraminByUrl = async (
 ): Promise<CrawledJob | null> => {
   try {
     const recIdx = extractExternalId(url, "saramin");
+    url = `https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=${recIdx}`;
 
     const { data: html } = await axios.get(url, {
       headers: {

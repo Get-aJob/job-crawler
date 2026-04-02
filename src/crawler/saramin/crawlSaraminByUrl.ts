@@ -3,9 +3,6 @@ import * as cheerio from "cheerio";
 import { CrawledJob } from "../../../types";
 import { extractExternalId } from "../../utils/extractExternalId";
 
-/**
- * 섹션 추출
- */
 const extractSection = (
   text: string,
   keywords: string[],
@@ -13,7 +10,7 @@ const extractSection = (
 ) => {
   for (const keyword of keywords) {
     const regex = new RegExp(
-      `${keyword}([\\s\\S]*?)(?=${stopKeywords.join("|")}|$)`
+      `${keyword}(?!\\s*및)([\\s\\S]*?)(?=${stopKeywords.join("|")}|$)`
     );
     const match = text.match(regex);
     if (match?.[1]) return match[1].trim();
@@ -21,9 +18,6 @@ const extractSection = (
   return "";
 };
 
-/**
- * 상세 내용
- */
 const fetchDetail = async (recIdx: string, referer: string) => {
   try {
     const { data } = await axios.get(
@@ -60,9 +54,6 @@ const fetchDetail = async (recIdx: string, referer: string) => {
   }
 };
 
-/**
- * 회사 로고
- */
 const fetchCompanyLogo = async (recIdx: string, referer: string) => {
   try {
     const { data } = await axios.get(
@@ -91,9 +82,6 @@ const fetchCompanyLogo = async (recIdx: string, referer: string) => {
   }
 };
 
-/**
- * 🔥 JSON 추출 (핵심 트릭)
- */
 const extractJsonFromHtml = (html: string) => {
   const match = html.match(/window\.__INITIAL_STATE__\s*=\s*({.*});/);
   if (!match || !match[1]) return null;
@@ -105,9 +93,6 @@ const extractJsonFromHtml = (html: string) => {
   }
 };
 
-/**
- * 🔥 검색 fallback (정확 매칭 버전)
- */
 const fetchFromSearch = async (recIdx: string) => {
   try {
     const searchUrl = `https://www.saramin.co.kr/zf_user/search?searchword=${recIdx}`;
@@ -125,7 +110,6 @@ const fetchFromSearch = async (recIdx: string) => {
       const link = $(el).find(".job_tit a").attr("href");
       if (!link) continue;
 
-      // 🔥 정확한 rec_idx 비교 (중요)
       const id = link.match(/rec_idx=(\d+)/)?.[1];
       if (id !== recIdx) continue;
 
@@ -145,9 +129,6 @@ const fetchFromSearch = async (recIdx: string) => {
   }
 };
 
-/**
- * ✅ 최종 단일 크롤링
- */
 export const crawlSaraminByUrl = async (
   url: string
 ): Promise<CrawledJob | null> => {
@@ -161,39 +142,43 @@ export const crawlSaraminByUrl = async (
     });
 
     const $ = cheerio.load(html);
-
-    // 🔥 1. JSON 시도
     const json = extractJsonFromHtml(html);
     const jobData = json?.jobView || json?.job || null;
 
-    let title =
-      jobData?.title ||
-      $(".tit_job").text().trim() ||
-      $("h1").text().trim() ||
-      "";
+    const pageTitle = $("title").text().trim();
+    const metaDesc = $("meta[name='description']").attr("content") || "";
+    const metaParts = metaDesc.split(", ");
+    const titleMatch = pageTitle.match(/\[.+?\]\s*(.+?)\s*(?:\(D-\d+\))?\s*-\s*사람인/);
+    const metaTitle = titleMatch?.[1] || "";
+    const metaCompany = metaParts[0] || "";
+    const metaExperience = metaParts.find(p => p.startsWith("경력:"))?.replace("경력:", "") || "";
+    const metaDeadline = metaParts.find(p => p.startsWith("마감일:"))?.replace("마감일:", "") || "";
+    
 
-    let company =
-      jobData?.company?.name ||
-      $(".company_name").text().trim() ||
-      $(".corp_name").text().trim() ||
-      "";
+let title =
+  jobData?.title || metaTitle || $(".tit_job").text().trim() || "";
 
-    let location =
-      jobData?.location ||
-      $(".info_job span").eq(0).text().trim() ||
-      "";
+let company =
+  jobData?.company?.name || metaCompany || $(".title_inner a.company").text().trim() || "";
 
-    let experience =
-      jobData?.experience ||
-      $(".info_job span").eq(1).text().trim() ||
-      "";
+let location =
+  jobData?.location ||
+  $(".jv_summary dl").filter((_, el) => $(el).find("dt").text().trim() === "근무지역")
+    .find("dd").text().replace(/지도보기/g, "").trim() ||
+  "";
 
-    let deadline =
-      jobData?.deadline ||
-      $(".job_date").text().trim() ||
-      "";
+let experience =
+  jobData?.experience || metaExperience ||
+  $(".jv_summary dl").filter((_, el) => $(el).find("dt").text().trim() === "경력")
+    .find("dd strong").text().trim() ||
+  "";
 
-    // 🔥 2. 검색 fallback (부족한 경우만)
+let deadline =
+  jobData?.deadline || metaDeadline ||
+  $(".info_period .end").next("dd").text().trim() ||
+  "";
+
+
     if (!title || !company || !location) {
       const searchData = await fetchFromSearch(recIdx);
 
@@ -206,12 +191,17 @@ export const crawlSaraminByUrl = async (
         url = searchData.url;
       }
     }
-
-    // 🔥 3. 상세 + 로고
     const [detail, logo] = await Promise.all([
       fetchDetail(recIdx, url),
       fetchCompanyLogo(recIdx, url),
     ]);
+
+  const locationFromContent = 
+    detail?.content?.match(/근무지\s*[：:]\s*([^\s•]+)/)?.[1] ||
+    detail?.content?.match(/(서울|경기|인천|부산|대전|대구|광주|울산|판교|성남|수원)/)?.[1] ||
+    "";
+  location = location || locationFromContent;
+
 
     return {
       externalId: recIdx,

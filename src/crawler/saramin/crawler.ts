@@ -107,7 +107,6 @@ export const crawlSaramin = async (): Promise<CrawledJob[]> => {
 
       const $ = cheerio.load(data);
       const elements = $(".item_recruit").toArray();
-
       const jobs: CrawledJob[] = [];
 
       for (const el of elements) {

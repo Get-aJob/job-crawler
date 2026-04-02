@@ -122,7 +122,7 @@ const testDetectPlatformWithRealData = (jobs: CrawledJob[]) => {
 const testIntegratedCrawl = async () => {
   console.log("\n 수동 크롤링 테스트\n");
 
-  const url = "https://www.wanted.co.kr/wd/272068";
+  const url = "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=search&rec_idx=52300696&location=ts&searchword=%EB%94%94%EC%9E%90%EC%9D%B8&searchType=search&paid_fl=n&search_uuid=c16f1a24-24fa-45a6-b6f6-8c8897ab2fc3&t_ref=search&t_ref_content=generic#seq=0";
 
   const job = await crawlJobByUrl(url);
 
@@ -132,20 +132,20 @@ const testIntegratedCrawl = async () => {
 const main = async () => {
 
 //수동 크롤링 테스트 로직
- //await testIntegratedCrawl()
+await testIntegratedCrawl()
 
 //자동크롤링 테스트 로직
-   const SOURCE: Source = "saramin"; 
+  //  const SOURCE: Source = "saramin"; 
 
-  const rawJobs = await runCrawler(SOURCE);
+  // const rawJobs = await runCrawler(SOURCE);
 
-   testDetectPlatformWithRealData(rawJobs);
+  //  testDetectPlatformWithRealData(rawJobs);
 
-  printResult(rawJobs);
+  // printResult(rawJobs);
 
 // 수동크롤링 데이터베이스 insert 테스트 로직
   //  const url =
-  //   "https://www.wanted.co.kr/wd/308052";
+  //   "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=search&rec_idx=52300696&location=ts&searchword=%EB%94%94%EC%9E%90%EC%9D%B8&searchType=search&paid_fl=n&search_uuid=c16f1a24-24fa-45a6-b6f6-8c8897ab2fc3&t_ref=search&t_ref_content=generic#seq=0";
 
   // const result = await saveJob(url);
 

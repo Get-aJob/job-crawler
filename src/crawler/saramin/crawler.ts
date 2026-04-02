@@ -10,7 +10,7 @@ const extractSection = (
 ) => {
   for (const keyword of keywords) {
     const regex = new RegExp(
-      `${keyword}([\\s\\S]*?)(?=${stopKeywords.join("|")}|$)`
+      `${keyword}(?!\\s*및)\\s*([\\s\\S]*?)(?=${stopKeywords.join("|")}|$)`
     );
     const match = text.match(regex);
     if (match?.[1]) return match[1].trim();
@@ -36,14 +36,14 @@ const fetchDetail = async (recIdx: string, referer: string) => {
 
     const requirements = extractSection(
       rawContent,
-      ["자격요건", "지원자격"],
-      ["우대사항", "복지", "근무", "마감"]
+      ["자격요건", "자격 요건", "지원자격", "필수사항"],
+      ["우대사항", "우대 사항", "복지", "근무", "마감"]
     );
 
     const preferred = extractSection(
       rawContent,
-      ["우대사항"],
-      ["복지", "근무", "마감"]
+      ["우대사항", "우대 사항"],
+      ["자격요건", "자격 요건", "지원자격", "필수사항", "복지", "근무", "마감"]
     );
 
     return {
@@ -96,17 +96,17 @@ export const crawlSaramin = async (): Promise<CrawledJob[]> => {
 
   for (const keyword of KEYWORDS) {
     try {
-      const URL = `https://www.saramin.co.kr/zf_user/search?searchword=${encodeURIComponent(keyword)}`;
+      const searchURL = `https://www.saramin.co.kr/zf_user/search?searchword=${encodeURIComponent(keyword)}`;
 
-      const { data } = await axios.get(URL, {
+      const { data } = await axios.get(searchURL, {
         headers: {
           "User-Agent": "Mozilla/5.0",
         },
+        timeout: 10000,
       });
 
       const $ = cheerio.load(data);
       const elements = $(".item_recruit").toArray();
-
       const jobs: CrawledJob[] = [];
 
       for (const el of elements) {
@@ -150,9 +150,8 @@ export const crawlSaramin = async (): Promise<CrawledJob[]> => {
           if (detail?.requirements) job.requirements = detail.requirements;
           if (detail?.preferred) job.preferred = detail.preferred;
 
-          job.companyLogo = companyLogo;
+          job.companyLogo = companyLogo ?? "";
 
-          // 간단한 지연 추가 (DNS 오류/IP 차단 방지)
           await new Promise((resolve) => setTimeout(resolve, 300));
         } catch (e: any) {
           console.error("상세 실패:", job.url, e.message);

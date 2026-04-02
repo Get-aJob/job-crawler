@@ -122,7 +122,7 @@ const testDetectPlatformWithRealData = (jobs: CrawledJob[]) => {
 const testIntegratedCrawl = async () => {
   console.log("\n 수동 크롤링 테스트\n");
 
-  const url = "https://www.wanted.co.kr/wd/272068";
+  const url = "https://www.saramin.co.kr/zf_user/jobs/relay/view?isMypage=no&rec_idx=53213455&recommend_ids=eJxFycENADEIA7CZSEKAaW6RG75S1apPy0kERXwd9SdV7a4DOAa6MwHeEaXKA46dftBsLMehFWY%3D&view_type=search&rec_scn_id=817&referPage=y&refDpId=SRI_050_VIEW_MIX_RCT_NONMEM&gz=1&t_ref_scnid=817&refer=y&inner_source=saramin&inner_medium=pattern&inner_campaign=non-logged_relay_view_3&inner_term=search&referNonce=c212c55c874b2343fca8&relayNonce=c212c55c874b2343fca8&dpId=SRI_050_VIEW_MIX_RCT_NONMEM&immediately_apply_layer_open=n#seq=0";
 
   const job = await crawlJobByUrl(url);
 
@@ -132,24 +132,24 @@ const testIntegratedCrawl = async () => {
 const main = async () => {
 
 //수동 크롤링 테스트 로직
- //await testIntegratedCrawl()
+//await testIntegratedCrawl()
 
 //자동크롤링 테스트 로직
-   const SOURCE: Source = "wanted"; 
+  //  const SOURCE: Source = "saramin"; 
 
-  const rawJobs = await runCrawler(SOURCE);
+  // const rawJobs = await runCrawler(SOURCE);
 
-   testDetectPlatformWithRealData(rawJobs);
+  //  testDetectPlatformWithRealData(rawJobs);
 
-  printResult(rawJobs);
+  // printResult(rawJobs);
 
 // 수동크롤링 데이터베이스 insert 테스트 로직
-  //  const url =
-  //   "https://www.wanted.co.kr/wd/308052";
+   const url =
+    "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=search&rec_idx=53434448&searchword=%EB%94%94%EC%9E%90%EC%9D%B8&searchType=search&paid_fl=y&t_ref=search&t_ref_content=keyword_logo_recruiter#seq=0";
 
-  // const result = await saveJob(url);
+  const result = await saveJob(url);
 
-  // console.log(result);
+  console.log(result);
 };
 
 main();

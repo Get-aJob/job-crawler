@@ -160,7 +160,7 @@ export const crawlIncruitByUrl = async (
       if (company && title.startsWith(company)) {
         title = title.slice(company.length).trim();
       }
-      
+
     let logo = "";
     const logoSrc = $(".jcinfo_logo img").attr("src");
     if (logoSrc) {
@@ -234,7 +234,7 @@ export const crawlIncruitByUrl = async (
     const content = [
       requirements && `자격요건\n${requirements}`,
       preferred && `우대사항\n${preferred}`,
-      normalized && `상세내용\n${normalized.slice(0, 1000)}`,
+      (!requirements && !preferred) && `상세내용\n${normalized.slice(0, 1000)}`,
     ]
       .filter(Boolean)
       .join("\n\n");

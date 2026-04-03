@@ -1,4 +1,4 @@
 export const KEYWORDS = [
-    "금융",
-    "디자인",
+    "데이터",
+    "풀스택",
 ];

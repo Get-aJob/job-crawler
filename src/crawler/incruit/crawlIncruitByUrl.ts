@@ -4,10 +4,10 @@ import iconv from "iconv-lite";
 import { extractExternalId } from "../../utils/extractExternalId";
 import { CrawledJob } from "../../../types";
 
-/* -------------------- 텍스트 유틸 -------------------- */
 
 const cleanText = (text: string): string => {
   return text
+    .replace(/^\s*[\]}\[{>]+\s*/gm, "")
     .replace(/\s+/g, " ")
     .replace(/우리 회사를.*?소개해주세요/g, "")
     .replace(/안녕하세요.*?연락드렸습니다\./g, "")
@@ -19,6 +19,7 @@ const cleanText = (text: string): string => {
     .replace(/\*.*?\*/g, "")
     .replace(/\{.*?\}/g, "")
     .replace(/\|/g, " ")
+    .replace(/(?<![A-Za-z0-9])\$(?![A-Za-z0-9])/g, "")
     .trim();
 };
 
@@ -42,8 +43,6 @@ const cleanTitle = (title: string) => {
     .replace(/\s*채용\s*:\s*/, "")
     .trim();
 };
-
-/* -------------------- 파싱 유틸 -------------------- */
 
 const trimBeforeKeyword = (text: string, keyword: string) => {
   const idx = text.indexOf(keyword);
@@ -74,16 +73,17 @@ const splitSections = (text: string) => {
     {
       key: "requirements",
       regex:
-        /(자격\s?요건|지원\s?자격)([\s\S]*?)(우대\s?사항|우대\s?조건|근무\s?조건|$)/,
+        /(자격\s?요건|지원\s?자격|\[자격\s?요건[^\]]*\])([\s\S]*?)(우대\s?사항|우대\s?조건|우대\s?내용|기타\s?우대|근무\s?조건|근무\s?시간|급여\s?조건|급여\s?수준|전형\s?단계|전형\s?방법|전형\s?절차|제출\s?서류|접수\s?방법|고용\s?형태|유의\s?사항|$)/,
       keyword: "자격요건",
     },
     {
       key: "preferred",
       regex:
-        /(우대\s?사항|우대\s?조건)([\s\S]*?)(자격\s?요건|근무\s?조건|$)/,
+        /(우대\s?사항|우대\s?조건|우대\s?내용|기타\s?우대|\[우대\s?사항[^\]]*\])([\s\S]*?)(자격\s?요건|담당\s?업무|근무\s?조건|전형\s?단계|전형\s?방법|전형\s?절차|제출\s?서류|접수\s?방법|고용\s?형태|유의\s?사항|$)/,
       keyword: "우대사항",
     },
   ];
+
 
   for (const { key, regex, keyword } of patterns) {
     const match = normalize.match(regex);
@@ -133,7 +133,6 @@ const parseJobContent = (rawText: string) => {
   };
 };
 
-/* -------------------- 메인 크롤러 -------------------- */
 
 export const crawlIncruitByUrl = async (
   url: string
@@ -149,20 +148,31 @@ export const crawlIncruitByUrl = async (
     const html = iconv.decode(response.data, "euc-kr");
     const $ = cheerio.load(html);
 
-    /* -------- 기본 정보 -------- */
-
     const titleRaw =
       $(".jcinfo_tit").text().trim() ||
       $("title").text().trim();
 
-    const title = cleanTitle(titleRaw);
-
+    let title = cleanTitle(titleRaw);
     const company =
       $(".jcinfo_top a").first().text().trim() ||
       $(".jcinfo_top").text().trim() ||
       $(".cpname").text().trim() ||
       $("meta[property='og:site_name']").attr("content") ||
       "";
+
+      const companyShort = company
+    .replace(/^\(주\)|^주식회사\s*|^\(사\)|^\(유\)/g, "")
+    .replace(/\(주\)$|\(사\)$|\(유\)$/g, "")
+    .trim();
+
+    if (company && title.startsWith(company)) {
+      title = title.slice(company.length).trim();
+    } else if (companyShort && title.startsWith(companyShort)) {
+      title = title.slice(companyShort.length).trim();
+    }
+
+    const escapedCompany = companyShort.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    title = title.replace(new RegExp(`^\\[${escapedCompany}\\]\\s*`), "").trim();
 
     let logo = "";
     const logoSrc = $(".jcinfo_logo img").attr("src");
@@ -171,8 +181,6 @@ export const crawlIncruitByUrl = async (
         ? logoSrc
         : `https:${logoSrc}`;
     }
-
-    /* -------- iframe 처리 -------- */
 
     const iframeSrc =
       $("iframe[src*='jobpostcont']").attr("src") ||
@@ -192,42 +200,59 @@ export const crawlIncruitByUrl = async (
       const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
       const $$ = cheerio.load(iframeHtml);
 
+      $$("style, script").remove();
+
       rawText =
         $$(".job_cont, .jobview, #job_detail, .content, .view_cont, .detail_view").text() ||
         $$("body").text();
     } else {
+      $("style, script").remove();
       rawText =
         $(".job_cont, .jobview, #job_detail, .content, .view_cont, .detail_view").text() ||
         $("body").text();
     }
 
-    /* -------- 본문 정제 -------- */
-
     const normalized = normalizeContent(rawText);
     const parsed = parseJobContent(normalized);
 
-    const requirements =
+    const regexFallback =
+      normalized.match(/(자격요건|지원자격)([\s\S]*?)(우대|조건|$)/)?.[2] || "";
+
+    const rawRequirements =
       parsed.requirements ||
-      normalized.match(/(자격요건|지원자격)([\s\S]*?)(우대|조건|$)/)?.[2] ||
-      "";
+      (regexFallback.length > 500 ? "" : regexFallback);
 
-    const preferred =
+    const cleanSection = (text: string) =>
+      text
+        .replace(/^[^\[\]\n]*\]\s*/gm, "")
+        .replace(/^[\-\]}{>:\s]+/gm, "")
+        .trim();
+
+    const reqCleaned = cleanSection(rawRequirements);
+    const requirements = reqCleaned.length < 10 ? "" : reqCleaned;
+
+    const prefFallback = normalized.match(/(우대사항|우대조건)([\s\S]*?)(자격|조건|$)/)?.[2] || "";
+    const prefCleaned = cleanSection(
       parsed.preferred ||
-      normalized.match(/(우대사항|우대조건)([\s\S]*?)(자격|조건|$)/)?.[2] ||
-      "";
-
-    /* -------- 기타 정보 -------- */
-
-    const infoText =
-      $(".jcinfo_detail, .jcinfo_list, .tb_detail").text();
-
-    const locationMatch = infoText.match(
-      /(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/
+      (prefFallback.length > 500 ? "" : prefFallback)
     );
+    const preferred = prefCleaned.length < 10 ? "" : prefCleaned;
 
-    const experienceMatch = infoText.match(
-      /(경력\s?\d+~\d+년|신입|경력)/
-    );
+    const infoText = $(".jcinfo_detail, .jcinfo_list, .tb_detail").text();
+
+    const locationText =
+      $(".jcinfo_detail li, .jcinfo_list li, .tb_detail td, ul.jc_list li")
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .find(text => /(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)/.test(text));
+
+    const locationMatch = locationText
+      ? locationText.match(/(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/)
+      : null;
+
+    const experienceMatch =
+      infoText.match(/(경력\s?\d+~\d+년|경력\s?\d+년\s?↑|신입무관|경력무관|신입|인턴|경력)/) ||
+      normalized.match(/(경력\s?\d+~\d+년|경력\s?\d+년\s?↑|신입무관|경력무관|신입|인턴)/);
 
     const deadlineRaw =
       $(".dday, .date, .jcinfo_date")
@@ -237,12 +262,10 @@ export const crawlIncruitByUrl = async (
 
     const deadline = [...new Set(deadlineRaw)].join("");
 
-    /* -------- content -------- */
-
     const content = [
       requirements && `자격요건\n${requirements}`,
       preferred && `우대사항\n${preferred}`,
-      normalized && `상세내용\n${normalized.slice(0, 1000)}`,
+      (!requirements && !preferred) && `상세내용\n${normalized.slice(0, 2000)}`,
     ]
       .filter(Boolean)
       .join("\n\n");

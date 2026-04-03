@@ -171,7 +171,8 @@ export const crawlIncruitByUrl = async (
       title = title.slice(companyShort.length).trim();
     }
 
-    title = title.replace(new RegExp(`^\\[${companyShort}\\]\\s*`), "").trim();
+    const escapedCompany = companyShort.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    title = title.replace(new RegExp(`^\\[${escapedCompany}\\]\\s*`), "").trim();
 
     let logo = "";
     const logoSrc = $(".jcinfo_logo img").attr("src");

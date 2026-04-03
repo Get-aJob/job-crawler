@@ -225,19 +225,18 @@ export const crawlIncruitByUrl = async (
     const cleanSection = (text: string) =>
       text
         .replace(/^[^\[\]\n]*\]\s*/gm, "")
-        .replace(/^[\-\]}\[{>:\s]+/gm, "")
+        .replace(/^[\-\]}{>:\s]+/gm, "")
         .trim();
 
     const reqCleaned = cleanSection(rawRequirements);
     const requirements = reqCleaned.length < 10 ? "" : reqCleaned;
 
+    const prefFallback = normalized.match(/(우대사항|우대조건)([\s\S]*?)(자격|조건|$)/)?.[2] || "";
     const prefCleaned = cleanSection(
       parsed.preferred ||
-      normalized.match(/(우대사항|우대조건)([\s\S]*?)(자격|조건|$)/)?.[2] ||
-      ""
+      (prefFallback.length > 500 ? "" : prefFallback)
     );
     const preferred = prefCleaned.length < 10 ? "" : prefCleaned;
-
 
     const infoText = $(".jcinfo_detail, .jcinfo_list, .tb_detail").text();
 

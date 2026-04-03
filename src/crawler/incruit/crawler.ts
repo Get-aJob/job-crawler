@@ -244,7 +244,7 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
         const cleanSection = (text: string) =>
           text
             .replace(/^[^\[\]\n]*\]\s*/gm, "")
-            .replace(/^[\-\]}\[{>:\s]+/gm, "")
+            .replace(/^[\-\]}{>:\s]+/gm, "")
             .trim();
 
         const reqCleaned = cleanSection(parsed.requirements);

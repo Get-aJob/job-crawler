@@ -1,12 +1,13 @@
 import { crawlSaramin } from "./saramin/crawler";
 import { crawlIncruit } from "./incruit/crawler";
 import { crawlWanted } from "./wanted/crawler";
+import { crawlJumpit } from "./jumpit/crawler";
 import { CrawledJob } from "../../types";
 import { detectPlatform } from "../utils/detectPlatform";
 import { crawlJobByUrl } from "./crawlJobByUrl";
 import { saveJob } from "../services/saveJob";
 
-type Source = "saramin" | "incruit" | "wanted" | "all";
+type Source = "saramin" | "incruit" | "wanted" | "jumpit" | "all";
 
 type DedupedJob = Omit<CrawledJob, "keyword"> & {
   keywords: string[];
@@ -16,18 +17,20 @@ const crawlers = {
   saramin: crawlSaramin,
   incruit: crawlIncruit,
   wanted: crawlWanted,
+  jumpit: crawlJumpit
 };
 
 const runCrawler = async (source: Source) => {
   try {
     if (source === "all") {
-      const [saramin, incruit, wanted] = await Promise.all([
+      const [saramin, incruit, wanted, jumpit] = await Promise.all([
         crawlSaramin(),
         crawlIncruit(),
         crawlWanted(),
+        crawlJumpit(),
       ]);
 
-      return [...saramin, ...incruit, ...wanted];
+      return [...saramin, ...incruit, ...wanted, ...jumpit];
     }
 
     const crawler = crawlers[source];
@@ -122,7 +125,7 @@ const testDetectPlatformWithRealData = (jobs: CrawledJob[]) => {
 const testIntegratedCrawl = async () => {
   console.log("\n 수동 크롤링 테스트\n");
 
-  const url = "https://job.incruit.com/jobdb_info/popupjobpost.asp?job=2603300003952&inOut=In";
+  const url = "https://jumpit.saramin.co.kr/position/53248632";
 
   const job = await crawlJobByUrl(url);
 
@@ -132,16 +135,16 @@ const testIntegratedCrawl = async () => {
 const main = async () => {
 
 //수동 크롤링 테스트 로직
-await testIntegratedCrawl()
+//await testIntegratedCrawl()
 
 //자동크롤링 테스트 로직
-  //  const SOURCE: Source = "incruit"; 
+   const SOURCE: Source = "jumpit"; 
 
-  // const rawJobs = await runCrawler(SOURCE);
+  const rawJobs = await runCrawler(SOURCE);
 
-  //  testDetectPlatformWithRealData(rawJobs);
+   testDetectPlatformWithRealData(rawJobs);
 
-  // printResult(rawJobs);
+  printResult(rawJobs);
 
 // 수동크롤링 데이터베이스 insert 테스트 로직
   //  const url =

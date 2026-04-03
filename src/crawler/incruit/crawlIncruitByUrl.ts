@@ -215,10 +215,12 @@ export const crawlIncruitByUrl = async (
     const normalized = normalizeContent(rawText);
     const parsed = parseJobContent(normalized);
 
+    const regexFallback =
+      normalized.match(/(자격요건|지원자격)([\s\S]*?)(우대|조건|$)/)?.[2] || "";
+
     const rawRequirements =
       parsed.requirements ||
-      normalized.match(/(자격요건|지원자격)([\s\S]*?)(우대|조건|$)/)?.[2] ||
-      "";
+      (regexFallback.length > 500 ? "" : regexFallback);
 
     const cleanSection = (text: string) =>
       text
@@ -226,26 +228,32 @@ export const crawlIncruitByUrl = async (
         .replace(/^[\-\]}\[{>:\s]+/gm, "")
         .trim();
 
+    const reqCleaned = cleanSection(rawRequirements);
+    const requirements = reqCleaned.length < 10 ? "" : reqCleaned;
 
-    const requirements = cleanSection(rawRequirements.length > 500 ? "" : rawRequirements);
-
-    const preferred = cleanSection(
+    const prefCleaned = cleanSection(
       parsed.preferred ||
       normalized.match(/(우대사항|우대조건)([\s\S]*?)(자격|조건|$)/)?.[2] ||
       ""
     );
+    const preferred = prefCleaned.length < 10 ? "" : prefCleaned;
+
 
     const infoText = $(".jcinfo_detail, .jcinfo_list, .tb_detail").text();
-    const infoTextFallback = $("ul.jc_list").text();
 
-    const locationMatch =
-      infoText.match(/(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/) ||
-      infoTextFallback.match(/(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/);
+    const locationText =
+      $(".jcinfo_detail li, .jcinfo_list li, .tb_detail td, ul.jc_list li")
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .find(text => /(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)/.test(text));
+
+    const locationMatch = locationText
+      ? locationText.match(/(서울|경기|인천|부산|대전|대구|광주|울산|세종|전국)[^\n\t]*/)
+      : null;
 
     const experienceMatch =
-      infoText.match(/(경력\s?\d+~\d+년|신입무관|경력무관|신입|인턴|경력)/) ||
-      normalized.match(/(경력\s?\d+~\d+년|신입무관|경력무관|신입|인턴|경력)/);
-
+      infoText.match(/(경력\s?\d+~\d+년|경력\s?\d+년\s?↑|신입무관|경력무관|신입|인턴|경력)/) ||
+      normalized.match(/(경력\s?\d+~\d+년|경력\s?\d+년\s?↑|신입무관|경력무관|신입|인턴)/);
 
     const deadlineRaw =
       $(".dday, .date, .jcinfo_date")

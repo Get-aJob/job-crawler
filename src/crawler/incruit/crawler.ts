@@ -169,9 +169,8 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
         );
 
         const experienceMatch = cleaned.match(
-          /(경력\s?\d+~\d+년|신입|경력)/
+          /(경력\s?\d+~\d+년|경력\s?\d+년\s?↑|신입무관|경력무관|신입|인턴|경력)/
         );
-
         const rawDeadline = $(el).find(".cell_last").text();
 
         const externalId =
@@ -248,9 +247,10 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
             .replace(/^[\-\]}\[{>:\s]+/gm, "")
             .trim();
 
-        const rawRequirements = parsed.requirements;
-        const requirements = cleanSection(rawRequirements.length > 500 ? "" : rawRequirements);
-        const preferred = cleanSection(parsed.preferred);
+        const reqCleaned = cleanSection(parsed.requirements);
+        const requirements = reqCleaned.length < 10 ? "" : reqCleaned;
+        const prefCleaned = cleanSection(parsed.preferred);
+        const preferred = prefCleaned.length < 10 ? "" : prefCleaned;
 
         job.requirements = requirements;
         job.preferred = preferred;

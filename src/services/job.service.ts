@@ -32,7 +32,7 @@ export const insertJobs = async (
   const { error } = await supabase
     .from("job_postings")
     .upsert(rows, {
-      onConflict: "source_type,external_id",
+      onConflict: "source_site_name,external_id",
       ignoreDuplicates: false,
     });
 

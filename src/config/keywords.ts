@@ -1,4 +1,4 @@
 export const KEYWORDS = [
-    "데이터",
-    "풀스택",
+    "프론트",
+    "보안",
 ];

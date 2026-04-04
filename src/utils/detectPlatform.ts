@@ -4,8 +4,10 @@ export const detectPlatform = (url: string): string | null => {
     const hostname = parsedUrl.hostname;
 
     if (hostname.includes("wanted.co.kr")) return "wanted";
+    if (hostname.startsWith("jumpit.")) return "jumpit";
     if (hostname.includes("saramin.co.kr")) return "saramin";
     if (hostname.includes("incruit.com")) return "incruit";
+
 
     return null;
   } catch (error) {

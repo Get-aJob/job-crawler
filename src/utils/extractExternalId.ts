@@ -1,4 +1,4 @@
-type Platform = "wanted" | "saramin" | "incruit";
+type Platform = "wanted" | "saramin" | "incruit" | "jumpit";
 
 export const extractExternalId = (
   url: string,
@@ -13,6 +13,9 @@ export const extractExternalId = (
 
     case "incruit":
       return extractIncruitId(url);
+
+    case "jumpit":
+      return extractJumpitId(url);
 
     default:
       throw new Error("지원하지 않는 플랫폼");
@@ -59,4 +62,10 @@ export const extractIncruitId = (url: string): string => {
   } catch {
     throw new Error("인크루트 ID 추출 실패");
   }
+};
+
+const extractJumpitId = (url: string): string => {
+  const match = url.match(/position\/(\d+)/);
+  if (!match || !match[1]) throw new Error("점핏 ID 추출 실패");
+  return match[1];
 };

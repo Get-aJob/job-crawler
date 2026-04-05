@@ -63,10 +63,11 @@ export const testCrawlHandler = async (req: Request, res: Response) => {
 
 export const statsHandler = async (req: Request, res: Response) => {
   try {
-    const { data: sourceRows } = await supabase
+    const { data: sourceRows, error: sourceError } = await supabase
       .from("job_postings")
       .select("source_site_name")
       .eq("source_type", "auto");
+    if (sourceError) throw sourceError;
 
     const bySource: Record<string, number> = {};
     for (const row of sourceRows || []) {
@@ -76,11 +77,12 @@ export const statsHandler = async (req: Request, res: Response) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: dateRows } = await supabase
+    const { data: dateRows, error: dateError } = await supabase
       .from("job_postings")
       .select("crawled_at")
       .eq("source_type", "auto")
       .gte("crawled_at", thirtyDaysAgo.toISOString());
+    if (dateError) throw dateError;
 
     const byDate: Record<string, number> = {};
     for (const row of dateRows || []) {
@@ -90,10 +92,11 @@ export const statsHandler = async (req: Request, res: Response) => {
 
     }
 
-    const { data: qualityRows, count: total } = await supabase
+    const { data: qualityRows, count: total, error: qualityError } = await supabase
       .from("job_postings")
       .select("location, experience, content, company_logo", { count: "exact" })
       .eq("source_type", "auto");
+    if (qualityError) throw qualityError;
 
     const fieldQuality = {
       location:     (qualityRows || []).filter(j => !j.location).length,

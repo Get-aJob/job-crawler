@@ -30,48 +30,48 @@
 
 ## 📁 프로젝트 구조
 
-```mermaid
-mindmap
-  root((job-crawler))
-    src
-      crawler
-        wanted
-          crawler.ts
-          crawlWantedByUrl.ts
-        saramin
-          crawler.ts
-          crawlSaraminByUrl.ts
-        incruit
-          crawler.ts
-          crawlIncruitByUrl.ts
-        jumpit
-          crawler.ts
-          crawlJumpitByUrl.ts
-        crawlJobByUrl.ts
-        main.ts
-      controllers
-        adminController.ts
-      routes
-        job.ts
-        admin.ts
-      services
-        job.service.ts
-        saveJob.ts
-      utils
-        dateParser.ts
-        detectPlatform.ts
-        extractExternalId.ts
-        mapper.ts
-      config
-        keywords.ts
-      public
-        admin.html
-      server.ts
-    .github
-      workflows
-        crawler.yml
-    supabase.ts
-    types.ts
+```
+job-crawler/
+├── .github/
+│   └── workflows/
+│       └── crawler.yml         # GitHub Actions 자동 스케줄링
+├── src/
+│   ├── config/
+│   │   └── keywords.ts         # 크롤링 키워드 설정
+│   ├── controllers/
+│   │   └── adminController.ts  # 어드민 API 핸들러
+│   ├── crawler/
+│   │   ├── wanted/
+│   │   │   ├── crawler.ts          # 원티드 배치 크롤러
+│   │   │   └── crawlWantedByUrl.ts # 원티드 단일 URL 크롤러
+│   │   ├── saramin/
+│   │   │   ├── crawler.ts
+│   │   │   └── crawlSaraminByUrl.ts
+│   │   ├── incruit/
+│   │   │   ├── crawler.ts
+│   │   │   └── crawlIncruitByUrl.ts
+│   │   ├── jumpit/
+│   │   │   ├── crawler.ts
+│   │   │   └── crawlJumpitByUrl.ts
+│   │   ├── crawlJobByUrl.ts    # URL로 플랫폼 감지 후 크롤링
+│   │   └── main.ts             # 배치 크롤링 진입점
+│   ├── public/
+│   │   └── admin.html          # 어드민 대시보드 UI
+│   ├── routes/
+│   │   ├── admin.ts            # 어드민 라우트
+│   │   └── job.ts              # 공고 API 라우트
+│   ├── services/
+│   │   ├── job.service.ts      # DB upsert / 중복 제거
+│   │   └── saveJob.ts          # 단일 공고 저장
+│   ├── utils/
+│   │   ├── dateParser.ts       # 마감일 파싱
+│   │   ├── detectPlatform.ts   # URL로 플랫폼 감지
+│   │   ├── extractExternalId.ts
+│   │   └── mapper.ts           # CrawledJob → DB 형식 변환
+│   └── server.ts               # Express 서버 진입점
+├── supabase.ts                 # Supabase 클라이언트
+├── types.ts                    # 공통 타입 정의
+└── package.json
 ```
 
 ---
@@ -160,7 +160,7 @@ export const KEYWORDS = [
 
 ```json
 {
-  "url": "https://www.wanted.co.kr/wd/123456"
+  "url": "https://공고링크"
 }
 ```
 

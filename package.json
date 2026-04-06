@@ -19,7 +19,6 @@
 "scripts": {
   "dev:api": "ts-node src/server.ts",
   "dev:crawler": "ts-node src/crawler/main.ts",
-  "dev:test": "ts-node src/crawler/test.ts",
   "build": "tsc",
   "start": "node dist/src/server.js",
   "start:crawler": "node dist/src/crawler/main.js"

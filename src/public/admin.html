@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>크롤러 어드민</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: white;
+      padding: 16px 32px;
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid #e0e0e0;
+      padding: 0 32px;
+    }
+
+    .tab {
+      padding: 14px 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #888;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: #1a1a2e;
+      border-bottom-color: #1a1a2e;
+    }
+
+    .tab-content { display: none; padding: 32px; }
+    .tab-content.active { display: block; }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .card h3 {
+      font-size: 15px;
+      color: #555;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    select, button {
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    select {
+      border: 1px solid #ddd;
+      background: white;
+      color: #333;
+      min-width: 180px;
+    }
+
+    button {
+      background: #1a1a2e;
+      color: white;
+      border: none;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .summary-item {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .summary-item .value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #1a1a2e;
+    }
+
+    .summary-item .label {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .quality-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .quality-item {
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .quality-item .q-count {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .quality-item .q-count.ok { color: #22c55e; }
+    .quality-item .q-count.warn { color: #f59e0b; }
+    .quality-item .q-count.bad { color: #ef4444; }
+
+    .quality-item .q-label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .keyword-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .keyword-tag {
+      background: #e8eaf6;
+      color: #3949ab;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: #f8f9fa;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #555;
+      border-bottom: 2px solid #e0e0e0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    tr:hover td { background: #fafafa; }
+
+    td.empty {
+      background: #fff5f5;
+      color: #ef4444;
+      font-size: 12px;
+    }
+
+    td a {
+      color: #3949ab;
+      text-decoration: none;
+    }
+
+    td a:hover { text-decoration: underline; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-ok { background: #dcfce7; color: #16a34a; }
+    .badge-empty { background: #fee2e2; color: #dc2626; }
+
+    .date-table td:first-child { font-weight: 500; }
+    .date-table .bar-cell { width: 200px; }
+
+    .bar {
+      height: 16px;
+      background: #c7d2fe;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .source-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .source-card {
+      background: #f0f4ff;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .source-card .s-name {
+      font-size: 13px;
+      color: #555;
+      text-transform: capitalize;
+    }
+
+    .source-card .s-count {
+      font-size: 26px;
+      font-weight: bold;
+      color: #3949ab;
+      margin-top: 4px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 48px;
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .error-msg {
+      background: #fff5f5;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .result-count {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: #f0f0f0;
+      color: #555;
+      border: 1px solid #ddd;
+      padding: 6px 14px;
+      font-size: 12px;
+      border-radius: 20px;
+    }
+
+    .filter-btn.active {
+      background: #1a1a2e;
+      color: white;
+      border-color: #1a1a2e;
+    }
+  </style>
+</head>
+<body>
+
+<header>🕷️ 크롤러 어드민</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('test')">크롤링 테스트</div>
+  <div class="tab" onclick="switchTab('stats')">DB 현황</div>
+  <div class="tab" onclick="switchTab('url')">단일 URL 테스트</div>
+</div>
+
+<div id="tab-test" class="tab-content active">
+
+  <div class="card">
+    <h3>테스트 크롤링 (DB 저장 없음)</h3>
+    <div class="controls">
+      <select id="source-select">
+        <option value="wanted">원티드</option>
+        <option value="saramin">사람인</option>
+        <option value="incruit">인크루트</option>
+        <option value="jumpit">점핏</option>
+        <option value="all">전체 (all)</option>
+      </select>
+      <button id="run-btn" onclick="runTestCrawl()">▶ 크롤링 실행</button>
+    </div>
+  </div>
+
+  <div id="test-result"></div>
+</div>
+
+<div id="tab-stats" class="tab-content">
+  <div id="stats-result"><div class="loading">로딩 중...</div></div>
+</div>
+
+<div id="tab-url" class="tab-content">
+  <div class="card">
+    <h3>단일 URL 크롤링 테스트 (DB 저장 없음)</h3>
+    <div class="controls">
+      <input id="url-input" type="text" placeholder="채용공고 URL 입력"
+        style="flex:1; padding:10px 14px; border:1px solid #ddd;
+               border-radius:6px; font-size:14px; min-width:300px;">
+      <button onclick="runUrlCrawl()">▶ 테스트</button>
+    </div>
+  </div>
+  <div id="url-result"></div>
+</div>
+
+
+<script>
+  let allJobs = [];
+  let currentFilter = 'all';
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['test','stats','url'][i] === name);
+    });
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+
+    if (name === 'stats') loadStats();
+  }
+
+  async function runTestCrawl() {
+    const source = document.getElementById('source-select').value;
+    const btn = document.getElementById('run-btn');
+    const resultEl = document.getElementById('test-result');
+
+    btn.disabled = true;
+    btn.textContent = '크롤링 중...';
+    resultEl.innerHTML = '<div class="loading">크롤링 중입니다. 잠시만 기다려주세요...</div>';
+
+    try {
+      const res = await fetch('/admin/test-crawl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || err.error || '크롤링 실패');
+      }
+
+      const data = await res.json();
+      allJobs = data.jobs;
+      currentFilter = 'all';
+      renderTestResult(data);
+    } catch (e) {
+      resultEl.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '▶ 크롤링 실행';
+    }
+  }
+
+  function renderTestResult(data) {
+    const { total, keywordStats, fieldQuality, jobs } = data;
+
+    const qualityItems = Object.entries(fieldQuality).map(([field, emptyCount]) => {
+      const ratio = total > 0 ? emptyCount / total : 0;
+      const cls = ratio === 0 ? 'ok' : ratio < 0.3 ? 'warn' : 'bad';
+      return `
+        <div class="quality-item">
+          <div class="q-count ${cls}">${emptyCount}</div>
+          <div class="q-label">${field} 누락</div>
+        </div>`;
+    }).join('');
+
+    const keywordTagsHtml = Object.entries(keywordStats).map(([kw, count]) =>
+      `<span class="keyword-tag">${kw} · ${count}건</span>`
+    ).join('');
+
+    const resultEl = document.getElementById('test-result');
+    resultEl.innerHTML = `
+      <div class="card">
+        <h3>수집 결과 요약</h3>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="value">${total}</div>
+            <div class="label">전체 수집 건수</div>
+          </div>
+          <div class="summary-item">
+            <div class="value">${Object.keys(keywordStats).length}</div>
+            <div class="label">키워드 수</div>
+          </div>
+          <div class="summary-item">
+            <div class="value">${fieldQuality.requirements}</div>
+            <div class="label">자격요건 누락</div>
+          </div>
+          <div class="summary-item">
+            <div class="value">${fieldQuality.deadline}</div>
+            <div class="label">마감일 누락</div>
+          </div>
+        </div>
+
+        <h3>키워드별 수집 건수</h3>
+        <div class="keyword-tags" style="margin-bottom:16px">${keywordTagsHtml}</div>
+
+        <h3>필드 품질 (누락 건수)</h3>
+        <div class="quality-grid">${qualityItems}</div>
+      </div>
+
+      <div class="card">
+        <h3>전체 공고 목록</h3>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="applyFilter('all', this)">전체 (${total})</button>
+          <button class="filter-btn" onclick="applyFilter('empty', this)">빈 필드 있음</button>
+          <button class="filter-btn" onclick="applyFilter('no-requirements', this)">자격요건 없음</button>
+          <button class="filter-btn" onclick="applyFilter('no-deadline', this)">마감일 없음</button>
+        </div>
+        <div id="jobs-table-wrap"></div>
+      </div>
+    `;
+
+    renderJobsTable(jobs);
+  }
+
+  function applyFilter(filter, btnEl) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+
+    let filtered = allJobs;
+    if (filter === 'empty') {
+      filtered = allJobs.filter(j =>
+        !j.title || !j.company || !j.location || !j.experience ||
+        !j.companyLogo || !j.requirements || !j.preferred || !j.deadline
+      );
+    } else if (filter === 'no-requirements') {
+      filtered = allJobs.filter(j => !j.requirements);
+    } else if (filter === 'no-deadline') {
+      filtered = allJobs.filter(j => !j.deadline);
+    }
+
+    renderJobsTable(filtered);
+  }
+
+  function renderJobsTable(jobs) {
+    const wrap = document.getElementById('jobs-table-wrap');
+    if (!wrap) return;
+
+    if (jobs.length === 0) {
+      wrap.innerHTML = '<div class="loading">표시할 공고가 없습니다.</div>';
+      return;
+    }
+
+    const rows = jobs.map(j => `
+      <tr>
+        <td title="${j.title || ''}">${j.title || '<span style="color:#ef4444">❌ 없음</span>'}</td>
+        <td>${j.company || '<span style="color:#ef4444">❌ 없음</span>'}</td>
+        <td class="${!j.location ? 'empty' : ''}">${j.location || '❌'}</td>
+        <td class="${!j.experience ? 'empty' : ''}">${j.experience || '❌'}</td>
+        <td class="${!j.deadline ? 'empty' : ''}">${j.deadline ? j.deadline.slice(0, 10) : '❌'}</td>
+        <td>${j.requirements
+          ? `<span class="badge badge-ok">✓</span>`
+          : `<span class="badge badge-empty">없음</span>`}
+        </td>
+        <td>${j.preferred
+          ? `<span class="badge badge-ok">✓</span>`
+          : `<span class="badge badge-empty">없음</span>`}
+        </td>
+        <td class="${!j.companyLogo ? 'empty' : ''}">
+          ${j.companyLogo
+            ? `<img src="${j.companyLogo}" style="height:20px;border-radius:3px" onerror="this.outerHTML='❌'">`
+            : '❌'}
+        </td>
+        <td><a href="${j.url}" target="_blank">링크</a></td>
+        <td>${j.keyword || ''}</td>
+      </tr>
+    `).join('');
+
+    wrap.innerHTML = `
+      <div class="result-count">${jobs.length}건 표시 중</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>직무</th>
+              <th>회사</th>
+              <th>위치</th>
+              <th>경력</th>
+              <th>마감일</th>
+              <th>자격요건</th>
+              <th>우대사항</th>
+              <th>로고</th>
+              <th>URL</th>
+              <th>키워드</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  async function loadStats() {
+    const el = document.getElementById('stats-result');
+    el.innerHTML = '<div class="loading">통계 불러오는 중...</div>';
+
+    try {
+      const res = await fetch('/admin/stats');
+      if (!res.ok) throw new Error('통계 조회 실패');
+      const data = await res.json();
+      renderStats(data);
+    } catch (e) {
+      el.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
+    }
+  }
+
+  function renderStats(data) {
+    const { total, bySource, byDate, fieldQuality } = data;
+
+    const sourceCards = Object.entries(bySource).map(([name, count]) => `
+      <div class="source-card">
+        <div class="s-name">${name}</div>
+        <div class="s-count">${count}</div>
+      </div>
+    `).join('');
+
+    const maxCount = Math.max(...Object.values(byDate).map(Number), 1);
+    const dateRows = Object.entries(byDate)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, count]) => `
+        <tr>
+          <td>${date}</td>
+          <td>${count}건</td>
+          <td class="bar-cell">
+            <div class="bar" style="width:${Math.round((Number(count)/maxCount)*180)}px"></div>
+          </td>
+        </tr>
+      `).join('');
+
+    const qualityItems = Object.entries(fieldQuality).map(([field, emptyCount]) => {
+      const ratio = total > 0 ? Number(emptyCount) / total : 0;
+      const cls = ratio === 0 ? 'ok' : ratio < 0.3 ? 'warn' : 'bad';
+      return `
+        <div class="quality-item">
+          <div class="q-count ${cls}">${emptyCount}</div>
+          <div class="q-label">${field} 누락</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('stats-result').innerHTML = `
+      <div class="card">
+        <h3>전체 자동 수집 공고 수</h3>
+        <div style="font-size:36px;font-weight:bold;color:#1a1a2e">${total.toLocaleString()}건</div>
+      </div>
+
+      <div class="card">
+        <h3>소스별 공고 수</h3>
+        <div class="source-cards">${sourceCards}</div>
+      </div>
+
+      <div class="card">
+        <h3>날짜별 수집 현황 (최근 30일)</h3>
+        <div class="table-wrap">
+          <table class="date-table">
+            <thead>
+              <tr><th>날짜</th><th>수집 건수</th><th>비율</th></tr>
+            </thead>
+            <tbody>${dateRows || '<tr><td colspan="3" style="text-align:center;color:#aaa">데이터 없음</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>DB 필드 품질 (누락 건수)</h3>
+        <div class="quality-grid">${qualityItems}</div>
+      </div>
+    `;
+  }
+
+  async function runUrlCrawl() {
+  const url = document.getElementById('url-input').value.trim();
+  const resultEl = document.getElementById('url-result');
+
+  if (!url) {
+    resultEl.innerHTML = '<div class="error-msg">URL을 입력해주세요.</div>';
+    return;
+  }
+
+  resultEl.innerHTML = '<div class="loading">크롤링 중...</div>';
+
+  try {
+    const res = await fetch('/admin/test-crawl-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || err.error);
+    }
+
+    const { job } = await res.json();
+
+    const fields = [
+      ['직무', job.title],
+      ['회사', job.company],
+      ['위치', job.location],
+      ['경력', job.experience],
+      ['마감일', job.deadline],
+      ['로고 URL', job.companyLogo],
+      ['자격요건', job.requirements],
+      ['우대사항', job.preferred],
+      ['URL', job.url],
+      ['externalId', job.externalId],
+    ];
+
+    const rows = fields.map(([label, value]) => `
+      <tr>
+        <td style="font-weight:600; color:#555; width:120px">${label}</td>
+        <td class="${!value ? 'empty' : ''}" style="white-space:pre-wrap; word-break:break-all">
+          ${value || '❌ 없음'}
+        </td>
+      </tr>
+    `).join('');
+
+    resultEl.innerHTML = `
+      <div class="card">
+        <h3>크롤링 결과</h3>
+        <div class="table-wrap">
+          <table><tbody>${rows}</tbody></table>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    resultEl.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
+  }
+}
+
+</script>
+</body>
+</html>

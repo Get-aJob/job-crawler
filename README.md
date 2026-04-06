@@ -1,283 +1,228 @@
-# job-crawler
+# Job Crawler
 
-공고 사이트에서 공고를 크롤링하는 서비스입니다.
-
-# Job Crawler 구축 및 배포 가이드
-
-이 문서는 **채용 공고 크롤러를 개발하고, Supabase에 저장하며, GitHub Actions로 자동 스케줄링하는 전체 과정**을 정리한 가이드입니다.
+채용 사이트에서 공고를 자동으로 수집하여 Supabase DB에 저장하는 크롤링 서비스입니다.  
+배치 자동 크롤링, 단일 URL 수동 크롤링, 어드민 대시보드를 제공합니다.
 
 ---
 
-# 1. 프로젝트 개요
+## 지원 플랫폼
 
-## 목표
-
-- 채용 사이트 크롤링 (Wanted, Incruit 등)
-- 데이터 정제 및 매핑
-- Supabase DB 저장
-- 자동 스케줄링 (GitHub Actions)
-
----
-
-# 2. 기술 스택
-
-- Node.js
-- TypeScript
-- Supabase
-- Cheerio
-- GitHub Actions
+|
+플랫폼
+|
+방식
+|
+단일 URL 지원
+|
+|
 
 ---
 
-# 3. 데이터 설계 핵심
+## |
 
-## external_id 사용 이유
-
-- 크롤링 데이터는 중복 발생 가능
-- 각 사이트의 고유 ID 필요
-
-ex)
-
-- Wanted: 335641
-- Incruit: 2603160002730
-
----
-
-## sourceType 컬럼
-
-```ts
-"CRAWLING" | "USER";
-```
-
-- 크롤링 데이터 vs 사용자 입력 데이터 구분
-
----
-
-# 4. 크롤링 데이터 처리
-
-## 문제: 마감일 데이터 형식
-
-ex)
-
-- "~04.15 (수)(2일전 등록)"
-- "상시채용"
-- "채용시 마감"
-
----
-
-### 해결 방법 고민중
-
--> 1. 프론트에서 날짜로 파싱 가능하면 날짜로, 불가능하면 공고 링크를 통해 확인하도록 유도
-
-```ts
-if (날짜 파싱 가능) {
-  deadline = ISO 날짜
-} else {
-  deadline = null
-  deadline_text = "공고 링크 확인"
-}
-```
-
--> 2. 공고 상세 페이지 조회 API 추가해서 가져오기
--> 3. 그냥 비워놓기
+|
+:---:
+|
+|
+원티드 (Wanted)
+|
+API
+|
+✅
+|
+|
+사람인 (Saramin)
+|
+HTML 파싱
+|
+✅
+|
+|
+인크루트 (Incruit)
+|
+HTML 파싱
+|
+✅
+|
+|
+점핏 (Jumpit)
+|
+API + HTML 파싱
+|
+✅
+|
 
 ---
 
-# 5. Supabase 연결
+## 기술 스택
 
-## 환경 변수
-
-```env
-SUPABASE_PROJECT_URL=...
-SUPABASE_SERVICE_ROLE_API_KEY=...
-```
-
----
-
-# 6. 데이터 삽입 흐름
-
-```ts
-await supabase.from("jobs").insert(mappedData);
-```
+- **Runtime**: Node.js
+- **Language**: TypeScript
+- **DB**: Supabase (PostgreSQL)
+- **HTTP**: Axios
+- **HTML 파싱**: Cheerio
+- **서버**: Express
+- **스케줄링**: GitHub Actions
 
 ---
 
-# 7. 프로젝트 구조
+## 프로젝트 구조
 
-## 최종 구조
+```mermaid
+mindmap
+  root((job-crawler))
+    src
+      crawler
+        wanted
+          crawler.ts
+          crawlWantedByUrl.ts
+        saramin
+          crawler.ts
+          crawlSaraminByUrl.ts
+        incruit
+          crawler.ts
+          crawlIncruitByUrl.ts
+        jumpit
+          crawler.ts
+          crawlJumpitByUrl.ts
+        crawlJobByUrl.ts
+        main.ts
+      controllers
+        adminController.ts
+      routes
+        job.ts
+        admin.ts
+      services
+        job.service.ts
+        saveJob.ts
+      utils
+        dateParser.ts
+        detectPlatform.ts
+        extractExternalId.ts
+        mapper.ts
+      config
+        keywords.ts
+      public
+        admin.html
+      server.ts
+    .github
+      workflows
+        crawler.yml
+    supabase.ts
+    types.ts
 
-```
-├── .github/                # GitHub Actions 설정
-├── node_modules/          # 의존성 패키지
-├── src/
-│   ├── crawler/           # 크롤링 실행 로직
-│   ├── services/          # DB 처리
-│   └── utils/             # 데이터 가공
-│
-├── .env                   # 환경 변수
-├── .gitignore
-├── package.json
-├── package-lock.json
-├── README.md
-│
-├── supabase.ts            # Supabase 설절
-├── types.ts               # 타입 정의
-├── tsconfig.json
-```
+🔄 데이터 흐름
 
----
+ 환경 변수
+프로젝트 루트에 .env 파일을 생성하세요.
 
-# 8. TypeScript 설정
+SUPABASE_PROJECT_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_API_KEY=your_service_role_key
 
-## tsconfig.json
-
-```json
-{
-  "compilerOptions": {
-    "outDir": "./dist",
-    "module": "commonjs",
-    "target": "ES2020",
-    "esModuleInterop": true,
-    "strict": true
-  },
-  "include": ["src"]
-}
-```
-
----
-
-# 9. 빌드 및 실행 방식
-
-## 잘못된 방식
-
-```bash
-ts-node src/crawler/main.ts
-```
-
-문제:
-
-- undici / Web API 충돌
-
----
-
-## 올바른 방식
-
-```bash
-npm run build
-node dist/crawler/main.js
-```
-
----
-
-# 10. GitHub Actions 설정
-
-## 위치
-
-```
-.github/workflows/crawler.yml
-```
-
----
-
-## 최종 코드
-
-```yaml
-name: Job Crawler
-
-on:
-  schedule:
-    - cron: "0 */6 * * *"
-  workflow_dispatch:
-
-jobs:
-  crawl:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-
-      - run: node -v
-
-      - run: npm ci
-
-      - run: npm run build
-
-      - run: node dist/src/crawler/main.js
-        env:
-          SUPABASE_PROJECT_URL: ${{ secrets.SUPABASE_PROJECT_URL }}
-          SUPABASE_SERVICE_ROLE_API_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_API_KEY }}
-```
-
----
-
-# 11. GitHub Secrets 설정
-
-## 경로
-
-```
+GitHub Actions 자동 실행을 위해 Repository Secrets에도 동일하게 등록해야 합니다.
 Settings → Secrets and variables → Actions
+
+🚀 실행 방법
+# 의존성 설치
+npm install
+
+# API 서버 실행 (수동 크롤링 + 어드민 페이지)
+npm run dev:api
+
+# 배치 크롤러 직접 실행
+npm run dev:crawler
+
+# 빌드
+npm run build
+
+# 빌드 후 서버 실행 (운영)
+npm run start
+
+# 빌드 후 배치 크롤러 실행 (운영)
+npm run start:crawler
+
+🔑 키워드 설정
+배치 크롤링 시 사용할 키워드는 src/config/keywords.ts에서 관리합니다.
+
+export const KEYWORDS = [
+  "프론트",
+  "보안",
+  // 원하는 키워드 추가
+];
+
+키워드를 추가하거나 변경한 뒤 커밋하면 다음 배치 크롤링부터 반영됩니다.
+
+API
+단일 URL 크롤링 + DB 저장
+백엔드 서버에서 호출하는 수동 크롤링 엔드포인트입니다.
+
+POST /api/jobs/crawl
+
+Request Body
+
+{
+  "url": "상세공고링크"
+}
+
+Response
+
+{
+  "success": true,
+  "data": { ...저장된 공고 데이터 }
+}
+
+지원 URL 형식
+
+https://www.wanted.co.kr/wd/{id}
+https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx={id}
+https://job.incruit.com/jobdb_info/jobpost.asp?job={id}
+https://www.jumpit.co.kr/position/{id}
+어드민 페이지
+서버 실행 후 브라우저에서 접속합니다.
+
+http://localhost:3000/admin
+
+크롤링 테스트 탭
+소스(wanted / saramin / incruit / jumpit / all) 선택 후 실행
+DB 저장 없이 수집 결과만 확인
+수집 건수, 키워드별 통계, 빈 필드 현황 표시
+전체 공고 테이블 (빈 필드 빨간색 표시)
+필터: 전체 / 빈 필드 있음 / 자격요건 없음 / 마감일 없음
+단일 URL 테스트 탭
+특정 채용공고 URL 입력 후 크롤링 결과 즉시 확인
+DB 저장 없음
+각 필드별 수집 결과 표시
+DB 현황 탭
+전체 자동 수집 공고 수
+소스별 공고 수
+날짜별 수집 현황 (최근 30일)
+DB 필드 품질 현황 (누락 건수)
+자동 스케줄링
+GitHub Actions로 6시간마다 자동 배치 크롤링이 실행됩니다.
+
+.github/workflows/crawler.yml
+
+항목	내용
+실행 주기	매 6시간 (0 */6 * * *)
+수동 실행	GitHub Actions 탭에서 workflow_dispatch 가능
+Node 버전	22
+데이터 구조
+CrawledJob (크롤링 결과)
+type CrawledJob = {
+  externalId: string;   // 각 플랫폼의 고유 ID
+  title: string;        // 직무명
+  company: string;      // 회사명
+  companyLogo?: string; // 회사 로고 URL
+  location: string;     // 근무지
+  experience: string;   // 경력 요건
+  deadline: string;     // 마감일
+  url: string;          // 공고 URL
+  requirements?: string; // 자격요건
+  preferred?: string;    // 우대사항
+  content?: string;      // 직무 내용
+  keyword: string;       // 매칭된 키워드
+};
+
+DB 중복 방지
+source_site_name + external_id 조합으로 upsert하여 동일 공고 중복 저장을 방지합니다.
 ```
-
-## 추가
-
-- SUPABASE_PROJECT_URL
-- SUPABASE_SERVICE_ROLE_API_KEY
-
----
-
-# 12. 트러블슈팅 정리
-
-## File is not defined
-
--> 원인:
-
-- undici + ts-node 충돌
-
--> 해결:
-
-- build 후 node 실행
-
----
-
-## Node 18 문제
-
--> 해결:
-
-- Node 20 이상 사용
-
----
-
-## Cannot find module dist/main.js
-
--> 원인:
-
-- 빌드 결과 경로 불일치
-
--> 해결:
-
-```bash
-ls dist
-```
-
----
-
-# 13. 최종 결과
-
-## 완성 상태
-
-- 크롤링 성공
-- DB 저장 성공
-- 스케줄링 자동 실행
-
----
-
-# 향후 개선
-
-- 키워드 설정 가능하게 수정
-- 데이터 파싱 정밀도 향상
-- 유연하게 유지보수 가능하게 리팩토링 필요

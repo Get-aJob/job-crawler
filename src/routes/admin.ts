@@ -5,7 +5,7 @@ import * as adminController from "../controllers/adminController";
 const router = Router();
 
 router.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/admin.html"));
+  res.sendFile(path.join(process.cwd(), "src/public/admin.html"));
 });
 
 router.post("/test-crawl", adminController.testCrawlHandler);

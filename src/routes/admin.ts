@@ -12,5 +12,7 @@ router.post("/test-crawl", adminController.testCrawlHandler);
 router.get("/stats", adminController.statsHandler);
 router.post("/test-crawl-url", adminController.testCrawlByUrlHandler);
 
+router.post("/save-crawl", adminController.saveCrawlHandler);
+router.post("/save-crawl-url", adminController.saveCrawlByUrlHandler);
 
 export default router;

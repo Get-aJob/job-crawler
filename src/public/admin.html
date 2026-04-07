@@ -447,9 +447,18 @@
           <button class="filter-btn" onclick="applyFilter('empty', this)">빈 필드 있음</button>
           <button class="filter-btn" onclick="applyFilter('no-requirements', this)">자격요건 없음</button>
           <button class="filter-btn" onclick="applyFilter('no-deadline', this)">마감일 없음</button>
+          <button class="filter-btn" onclick="applyFilter('no-required', this)">저장 제외될 공고</button>
         </div>
         <div id="jobs-table-wrap"></div>
       </div>
+          <div class="card">
+      <h3>DB 저장</h3>
+      <div class="controls">
+        <button id="save-btn" onclick="saveCrawl()">💾 DB에 저장</button>
+        <span id="save-result" style="font-size:13px;color:#555"></span>
+      </div>
+    </div>
+
     `;
 
     renderJobsTable(jobs);
@@ -470,8 +479,11 @@
       filtered = allJobs.filter(j => !j.requirements);
     } else if (filter === 'no-deadline') {
       filtered = allJobs.filter(j => !j.deadline);
+    } else if (filter === 'no-required') {
+      filtered = allJobs.filter(j =>
+        !j.title || !j.company || !j.url || !j.externalId
+      );
     }
-
     renderJobsTable(filtered);
   }
 
@@ -663,10 +675,58 @@
         <div class="table-wrap">
           <table><tbody>${rows}</tbody></table>
         </div>
+        <div style="margin-top:16px" class="controls">
+          <button onclick="saveByUrl('${job.url}')">💾 DB에 저장</button>
+          <span id="url-save-result" style="font-size:13px;color:#555"></span>
+        </div>
       </div>
     `;
   } catch (e) {
     resultEl.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
+  }
+}
+async function saveCrawl() {
+  const source = document.getElementById('source-select').value;
+  const btn = document.getElementById('save-btn');
+  const resultEl = document.getElementById('save-result');
+
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+  resultEl.textContent = '';
+
+  try {
+    const res = await fetch('/admin/save-crawl', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.error);
+    resultEl.textContent = `✅ ${data.saved}건 저장 완료`;
+  } catch (e) {
+    resultEl.textContent = `❌ 저장 실패: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 DB에 저장';
+  }
+}
+async function saveByUrl(url) {
+  const resultEl = document.getElementById('url-save-result');
+  resultEl.textContent = '저장 중...';
+
+  try {
+    const res = await fetch('/admin/save-crawl-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || data.error);
+    resultEl.textContent = `✅ 저장 완료: ${data.job.title}`;
+  } catch (e) {
+    resultEl.textContent = `❌ 저장 실패: ${e.message}`;
   }
 }
 

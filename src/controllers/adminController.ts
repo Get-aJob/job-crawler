@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { insertJobs } from "../services/job.service";
+import { saveJob } from "../services/saveJob";
 import { crawlWanted } from "../crawler/wanted/crawler";
 import { crawlSaramin } from "../crawler/saramin/crawler";
 import { crawlIncruit } from "../crawler/incruit/crawler";
@@ -125,3 +127,42 @@ export const testCrawlByUrlHandler = async (req: Request, res: Response) => {
     res.status(500).json({ error: "크롤링 실패", detail: error.message });
   }
 };
+
+export const saveCrawlHandler = async (req: Request, res: Response) => {
+  try {
+    const { source } = req.body as { source: Source };
+    if (!source) return res.status(400).json({ error: "source는 필수입니다." });
+
+    let totalSaved = 0;
+
+    if (source === "all") {
+      for (const [name, fn] of Object.entries(crawlers)) {
+        const jobs = await fn();
+        const count = await insertJobs(jobs, name);
+        totalSaved += count;
+      }
+    } else {
+      const crawler = crawlers[source];
+      if (!crawler) return res.status(400).json({ error: "유효하지 않은 소스" });
+      const jobs = await crawler();
+      totalSaved = await insertJobs(jobs, source);
+    }
+
+    res.json({ saved: totalSaved });
+  } catch (error: any) {
+    res.status(500).json({ error: "저장 실패", detail: error.message });
+  }
+};
+
+export const saveCrawlByUrlHandler = async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body as { url: string };
+    if (!url) return res.status(400).json({ error: "url은 필수입니다." });
+
+    const job = await saveJob(url);
+    res.json({ job });
+  } catch (error: any) {
+    res.status(500).json({ error: "저장 실패", detail: error.message });
+  }
+};
+

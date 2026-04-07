@@ -33,15 +33,16 @@ const fetchWantedDetail = async (jobId: number, buildId: string) => {
     const data = res.data?.pageProps?.initialData;
     if (!data) return null;
 
-    const { requirements, preferred_points, company, career, confirm_time, close_time, due_time } = data;
+    const { requirements, preferred_points, company, career, confirm_time, close_time, due_time, address } = data;
 
-    return {
-      experience: formatCareer(career),
-      deadline: close_time || due_time || confirm_time || "",
-      companyLogo: company?.logo_image || "",
-      requirements: requirements || "",
-      preferred: preferred_points || "",
-    };
+  return {
+    experience: formatCareer(career),
+    deadline: close_time || due_time || confirm_time || "",
+    companyLogo: company?.logo_image || "",
+    requirements: requirements || "",
+    preferred: preferred_points || "",
+    location: address?.full_location || address?.location || "",
+  };
   } catch (e) {
     console.error("상세 실패:", jobId);
     return null;
@@ -52,7 +53,6 @@ const fetchWantedDetail = async (jobId: number, buildId: string) => {
 export const crawlWanted = async (): Promise<CrawledJob[]> => {
   const allJobs: CrawledJob[] = [];
 
-  // buildId 홈페이지에서 한 번만 추출
   let buildId: string;
   try {
     const sampleRes = await axios.get("https://www.wanted.co.kr/", {
@@ -107,7 +107,7 @@ export const crawlWanted = async (): Promise<CrawledJob[]> => {
           title: item.position || "",
           company: item.company?.name || "",
           companyLogo: detail?.companyLogo || "",
-          location: item.address?.full_location || item.address?.location || "",
+          location: detail?.location || "",
           experience: detail?.experience || "",
           deadline: detail?.deadline || "",
           url: `https://www.wanted.co.kr/wd/${item.id}`,

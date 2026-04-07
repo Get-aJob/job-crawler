@@ -309,9 +309,19 @@
   margin-right: 4px;
 }
 
-.danger-btn {
-  background: #dc2626;
-}
+  .danger-btn {
+    background: #dc2626;
+  }
+  .warn-tag {
+    display: inline-block;
+    background: #fef3c7;
+    color: #d97706;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
   </style>
 </head>
 <body>
@@ -799,6 +809,11 @@ function renderLowQualityTable(jobs) {
       <td>${j.source_site_name || ''}</td>
       <td class="${!j.deadline ? 'empty' : ''}">${j.deadline ? j.deadline.slice(0, 10) : '❌'}</td>
       <td>${j.reasons.map(r => `<span class="reason-tag">${r}</span>`).join('')}</td>
+      <td>
+        ${j.relatedTables.length > 0
+          ? `⚠️ ${j.relatedTables.map(t => `<span class="warn-tag">${t}</span>`).join('')}`
+          : '<span style="color:#aaa;font-size:12px">없음</span>'}
+      </td>
       <td><a href="${j.source_url || '#'}" target="_blank">링크</a></td>
     </tr>
   `).join('');
@@ -818,6 +833,7 @@ function renderLowQualityTable(jobs) {
               <th>소스</th>
               <th>마감일</th>
               <th>사유</th>
+              <th>연관 데이터</th>
               <th>URL</th>
             </tr>
           </thead>

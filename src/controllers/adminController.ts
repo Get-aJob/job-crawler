@@ -168,16 +168,28 @@ export const saveCrawlByUrlHandler = async (req: Request, res: Response) => {
 
 export const getLowQualityJobsHandler = async (req: Request, res: Response) => {
   try {
-    const { data, error } = await supabase
-      .from("job_postings")
-      .select("id, title, company_name, source_url, external_id, location, experience, content, company_logo, deadline, source_site_name");
+    let allData: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
 
-    if (error) throw error;
+    while (true) {
+      const { data: pageData, error } = await supabase
+        .from("job_postings")
+        .select("id, title, company_name, source_url, external_id, location, experience, content, company_logo, deadline, source_site_name")
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+      if (!pageData || pageData.length === 0) break;
+
+      allData = allData.concat(pageData);
+      if (pageData.length < pageSize) break;
+      from += pageSize;
+    }
 
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    const jobs = (data || [])
+    const jobs = allData
       .map(job => {
         const reasons: string[] = [];
 
@@ -197,7 +209,35 @@ export const getLowQualityJobsHandler = async (req: Request, res: Response) => {
       })
       .filter(job => job.reasons.length > 0);
 
-    res.json({ total: jobs.length, jobs });
+    const jobIds = jobs.map(j => j.id);
+
+    const [appRes, commentRes, scheduleRes, interestedRes] = await Promise.all([
+      supabase.from("applications").select("job_posting_id").in("job_posting_id", jobIds),
+      supabase.from("comments").select("job_posting_id").in("job_posting_id", jobIds),
+      supabase.from("schedules").select("job_posting_id").in("job_posting_id", jobIds).not("job_posting_id", "is", null),
+      supabase.from("user_interested_jobs").select("job_posting_id").in("job_posting_id", jobIds),
+    ]);
+
+    const relatedMap: Record<string, string[]> = {};
+    const addRelated = (rows: any[], label: string) => {
+      for (const row of rows || []) {
+        const id = row.job_posting_id;
+        if (!relatedMap[id]) relatedMap[id] = [];
+        relatedMap[id].push(label);
+      }
+    };
+
+    addRelated(appRes.data || [], "지원");
+    addRelated(commentRes.data || [], "댓글");
+    addRelated(scheduleRes.data || [], "일정");
+    addRelated(interestedRes.data || [], "관심공고");
+
+    const jobsWithRelated = jobs.map(job => ({
+      ...job,
+      relatedTables: relatedMap[job.id] || [],
+    }));
+
+    res.json({ total: jobsWithRelated.length, jobs: jobsWithRelated });
   } catch (error: any) {
     res.status(500).json({ error: "조회 실패", detail: error.message });
   }

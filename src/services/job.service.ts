@@ -29,9 +29,24 @@ export const insertJobs = async (
     mapToJobPosting(job, source, CREATED_BY, sourceType)
   );
 
+  const validRows = sourceType === "auto"
+    ? rows.filter((row) => {
+        const isValid = row.title && row.company_name && row.source_url && row.external_id;
+        if (!isValid) {
+          console.warn(`[${source}] 필수 필드 누락으로 스킵:`, {
+            title: row.title,
+            company_name: row.company_name,
+            source_url: row.source_url,
+            external_id: row.external_id,
+          });
+        }
+        return isValid;
+      })
+    : rows;
+
   const { error } = await supabase
     .from("job_postings")
-    .upsert(rows, {
+    .upsert(validRows, {
       onConflict: "source_site_name,external_id",
       ignoreDuplicates: false,
     });
@@ -42,7 +57,7 @@ export const insertJobs = async (
     throw new Error("DB_INSERT_FAILED");
   }
 
-  console.log(`${source} 데이터 ${rows.length}개 저장 완료`);
+  console.log(`${source} 데이터 ${validRows.length}개 저장 완료`);
 
-  return rows.length;
+  return validRows.length;
 };

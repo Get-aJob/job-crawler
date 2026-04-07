@@ -15,4 +15,7 @@ router.post("/test-crawl-url", adminController.testCrawlByUrlHandler);
 router.post("/save-crawl", adminController.saveCrawlHandler);
 router.post("/save-crawl-url", adminController.saveCrawlByUrlHandler);
 
+router.get("/low-quality", adminController.getLowQualityJobsHandler);
+router.post("/delete-jobs", adminController.deleteJobsHandler);
+
 export default router;

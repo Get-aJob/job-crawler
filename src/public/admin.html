@@ -297,6 +297,21 @@
       color: white;
       border-color: #1a1a2e;
     }
+
+    .reason-tag {
+  display: inline-block;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.danger-btn {
+  background: #dc2626;
+}
   </style>
 </head>
 <body>
@@ -330,6 +345,18 @@
 
 <div id="tab-stats" class="tab-content">
   <div id="stats-result"><div class="loading">로딩 중...</div></div>
+  <div id="low-quality-section" style="margin-top:24px">
+  <div class="card">
+    <h3>저품질 공고 관리</h3>
+    <div class="controls">
+      <button onclick="loadLowQuality()">🔍 저품질 공고 조회</button>
+      <button class="danger-btn" id="delete-btn" onclick="deleteSelected()" disabled>🗑️ 선택 삭제</button>
+      <span id="low-quality-result" style="font-size:13px;color:#555"></span>
+    </div>
+  </div>
+  <div id="low-quality-table"></div>
+</div>
+
 </div>
 
 <div id="tab-url" class="tab-content">
@@ -729,7 +756,107 @@ async function saveByUrl(url) {
     resultEl.textContent = `❌ 저장 실패: ${e.message}`;
   }
 }
+let lowQualityJobs = [];
 
+async function loadLowQuality() {
+  const tableEl = document.getElementById('low-quality-table');
+  const resultEl = document.getElementById('low-quality-result');
+  tableEl.innerHTML = '<div class="loading">조회 중...</div>';
+  resultEl.textContent = '';
+
+  try {
+    const res = await fetch('/admin/low-quality');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    lowQualityJobs = data.jobs;
+    renderLowQualityTable(data.jobs);
+    resultEl.textContent = `총 ${data.total}건 발견`;
+  } catch (e) {
+    tableEl.innerHTML = `<div class="error-msg">❌ ${e.message}</div>`;
+  }
+}
+
+function renderLowQualityTable(jobs) {
+  const tableEl = document.getElementById('low-quality-table');
+  const deleteBtn = document.getElementById('delete-btn');
+
+  if (jobs.length === 0) {
+    tableEl.innerHTML = '<div class="loading">저품질 공고가 없습니다.</div>';
+    deleteBtn.disabled = true;
+    return;
+  }
+
+  deleteBtn.disabled = false;
+
+  const rows = jobs.map(j => `
+    <tr>
+      <td style="width:36px;text-align:center">
+        <input type="checkbox" class="job-check" value="${j.id}">
+      </td>
+      <td title="${j.title || ''}">${j.title || '<span style="color:#ef4444">❌ 없음</span>'}</td>
+      <td>${j.company_name || '<span style="color:#ef4444">❌ 없음</span>'}</td>
+      <td>${j.source_site_name || ''}</td>
+      <td class="${!j.deadline ? 'empty' : ''}">${j.deadline ? j.deadline.slice(0, 10) : '❌'}</td>
+      <td>${j.reasons.map(r => `<span class="reason-tag">${r}</span>`).join('')}</td>
+      <td><a href="${j.source_url || '#'}" target="_blank">링크</a></td>
+    </tr>
+  `).join('');
+
+  tableEl.innerHTML = `
+    <div class="card">
+      <div class="result-count" style="margin-bottom:8px">${jobs.length}건</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px">
+                <input type="checkbox" id="check-all" onclick="toggleAll(this)">
+              </th>
+              <th>직무</th>
+              <th>회사</th>
+              <th>소스</th>
+              <th>마감일</th>
+              <th>사유</th>
+              <th>URL</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function toggleAll(checkbox) {
+  document.querySelectorAll('.job-check').forEach(c => c.checked = checkbox.checked);
+}
+
+async function deleteSelected() {
+  const checked = [...document.querySelectorAll('.job-check:checked')].map(c => c.value);
+  if (checked.length === 0) return alert('삭제할 공고를 선택해주세요.');
+
+  if (!confirm(`선택한 ${checked.length}건을 삭제할까요?`)) return;
+
+  const resultEl = document.getElementById('low-quality-result');
+  resultEl.textContent = '삭제 중...';
+
+  try {
+    const res = await fetch('/admin/delete-jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: checked }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    resultEl.textContent = `✅ ${data.deleted}건 삭제 완료`;
+    await loadLowQuality();
+  } catch (e) {
+    resultEl.textContent = `❌ 삭제 실패: ${e.message}`;
+  }
+}
 </script>
 </body>
 </html>

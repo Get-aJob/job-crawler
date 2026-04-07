@@ -166,3 +166,57 @@ export const saveCrawlByUrlHandler = async (req: Request, res: Response) => {
   }
 };
 
+export const getLowQualityJobsHandler = async (req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase
+      .from("job_postings")
+      .select("id, title, company_name, source_url, external_id, location, experience, content, company_logo, deadline, source_site_name");
+
+    if (error) throw error;
+
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const jobs = (data || [])
+      .map(job => {
+        const reasons: string[] = [];
+
+        if (!job.title || !job.company_name || !job.source_url || !job.external_id)
+          reasons.push("필수필드누락");
+
+        if (job.deadline && new Date(job.deadline) < oneMonthAgo)
+          reasons.push("마감만료");
+
+        const fields = [job.title, job.company_name, job.location, job.experience,
+                        job.content, job.company_logo, job.deadline, job.source_url, job.external_id];
+        const missingCount = fields.filter(f => !f).length;
+        if (missingCount >= 4)
+          reasons.push(`${missingCount}개 누락`);
+
+        return { ...job, reasons };
+      })
+      .filter(job => job.reasons.length > 0);
+
+    res.json({ total: jobs.length, jobs });
+  } catch (error: any) {
+    res.status(500).json({ error: "조회 실패", detail: error.message });
+  }
+};
+
+export const deleteJobsHandler = async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body as { ids: string[] };
+    if (!ids || ids.length === 0) return res.status(400).json({ error: "ids는 필수입니다." });
+
+    const { error } = await supabase
+      .from("job_postings")
+      .delete()
+      .in("id", ids);
+
+    if (error) throw error;
+
+    res.json({ deleted: ids.length });
+  } catch (error: any) {
+    res.status(500).json({ error: "삭제 실패", detail: error.message });
+  }
+};

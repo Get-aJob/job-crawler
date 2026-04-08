@@ -386,6 +386,7 @@
 <script>
   let allJobs = [];
   let currentFilter = 'all';
+  let currentSnapshotId = null;
 
   function switchTab(name) {
     document.querySelectorAll('.tab').forEach((t, i) => {
@@ -420,6 +421,7 @@
 
       const data = await res.json();
       allJobs = data.jobs;
+      currentSnapshotId = data.snapshotId;
       currentFilter = 'all';
       renderTestResult(data);
     } catch (e) {
@@ -682,7 +684,7 @@
       throw new Error(err.detail || err.error);
     }
 
-    const { job } = await res.json();
+    const { job, snapshotId } = await res.json();
 
     const fields = [
       ['직무', job.title],
@@ -697,33 +699,54 @@
       ['externalId', job.externalId],
     ];
 
-    const rows = fields.map(([label, value]) => `
-      <tr>
-        <td style="font-weight:600; color:#555; width:120px">${label}</td>
-        <td class="${!value ? 'empty' : ''}" style="white-space:pre-wrap; word-break:break-all">
-          ${value || '❌ 없음'}
-        </td>
-      </tr>
-    `).join('');
-
     resultEl.innerHTML = `
       <div class="card">
         <h3>크롤링 결과</h3>
         <div class="table-wrap">
-          <table><tbody>${rows}</tbody></table>
+          <table id="url-result-table"><tbody></tbody></table>
         </div>
         <div style="margin-top:16px" class="controls">
-          <button onclick="saveByUrl('${job.url}')">💾 DB에 저장</button>
+          <button id="url-save-btn">💾 DB에 저장</button>
           <span id="url-save-result" style="font-size:13px;color:#555"></span>
         </div>
       </div>
     `;
+
+    const tbody = resultEl.querySelector('#url-result-table tbody');
+    fields.forEach(([label, value]) => {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.style.fontWeight = '600';
+      tdLabel.style.color = '#555';
+      tdLabel.style.width = '120px';
+      tdLabel.textContent = label;
+      
+      const tdValue = document.createElement('td');
+      tdValue.style.whiteSpace = 'pre-wrap';
+      tdValue.style.wordBreak = 'break-all';
+      if (!value) {
+        tdValue.className = 'empty';
+        tdValue.textContent = '❌ 없음';
+      } else {
+        tdValue.textContent = value;
+      }
+      
+      tr.appendChild(tdLabel);
+      tr.appendChild(tdValue);
+      tbody.appendChild(tr);
+    });
+
+    const saveBtn = resultEl.querySelector('#url-save-btn');
+    saveBtn.addEventListener('click', () => {
+      saveByUrl(snapshotId);
+    });
   } catch (e) {
     resultEl.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
   }
 }
 async function saveCrawl() {
-  const source = document.getElementById('source-select').value;
+  if (!currentSnapshotId) return alert('테스트 크롤링을 먼저 실행해주세요.');
+  
   const btn = document.getElementById('save-btn');
   const resultEl = document.getElementById('save-result');
 
@@ -735,7 +758,7 @@ async function saveCrawl() {
     const res = await fetch('/admin/save-crawl', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source }),
+      body: JSON.stringify({ snapshotId: currentSnapshotId }),
     });
 
     const data = await res.json();
@@ -748,7 +771,7 @@ async function saveCrawl() {
     btn.textContent = '💾 DB에 저장';
   }
 }
-async function saveByUrl(url) {
+async function saveByUrl(snapshotId) {
   const resultEl = document.getElementById('url-save-result');
   resultEl.textContent = '저장 중...';
 
@@ -756,7 +779,7 @@ async function saveByUrl(url) {
     const res = await fetch('/admin/save-crawl-url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ snapshotId }),
     });
 
     const data = await res.json();
@@ -936,7 +959,7 @@ async function deleteSelected() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    resultEl.textContent = `✅ ${data.deleted}건 삭제 완료`;
+    resultEl.textContent = data.message || `✅ ${data.deleted}건 삭제 완료`;
     await loadLowQuality();
   } catch (e) {
     resultEl.textContent = `❌ 삭제 실패: ${e.message}`;

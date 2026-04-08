@@ -799,25 +799,6 @@ function renderLowQualityTable(jobs) {
 
   deleteBtn.disabled = false;
 
-  const rows = jobs.map(j => `
-    <tr>
-      <td style="width:36px;text-align:center">
-        <input type="checkbox" class="job-check" value="${j.id}">
-      </td>
-      <td title="${j.title || ''}">${j.title || '<span style="color:#ef4444">❌ 없음</span>'}</td>
-      <td>${j.company_name || '<span style="color:#ef4444">❌ 없음</span>'}</td>
-      <td>${j.source_site_name || ''}</td>
-      <td class="${!j.deadline ? 'empty' : ''}">${j.deadline ? j.deadline.slice(0, 10) : '❌'}</td>
-      <td>${j.reasons.map(r => `<span class="reason-tag">${r}</span>`).join('')}</td>
-      <td>
-        ${j.relatedTables.length > 0
-          ? `⚠️ ${j.relatedTables.map(t => `<span class="warn-tag">${t}</span>`).join('')}`
-          : '<span style="color:#aaa;font-size:12px">없음</span>'}
-      </td>
-      <td><a href="${j.source_url || '#'}" target="_blank">링크</a></td>
-    </tr>
-  `).join('');
-
   tableEl.innerHTML = `
     <div class="card">
       <div class="result-count" style="margin-bottom:8px">${jobs.length}건</div>
@@ -837,11 +818,99 @@ function renderLowQualityTable(jobs) {
               <th>URL</th>
             </tr>
           </thead>
-          <tbody>${rows}</tbody>
+          <tbody id="lq-tbody"></tbody>
         </table>
       </div>
     </div>
   `;
+
+  const tbody = document.getElementById('lq-tbody');
+
+  jobs.forEach(j => {
+    const tr = document.createElement('tr');
+
+    const tdCheck = document.createElement('td');
+    tdCheck.style.width = '36px';
+    tdCheck.style.textAlign = 'center';
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.className = 'job-check';
+    check.value = j.id;
+    tdCheck.appendChild(check);
+    tr.appendChild(tdCheck);
+
+    const tdTitle = document.createElement('td');
+    if (j.title) {
+      tdTitle.textContent = j.title;
+      tdTitle.title = j.title;
+    } else {
+      tdTitle.innerHTML = '<span style="color:#ef4444">❌ 없음</span>';
+    }
+    tr.appendChild(tdTitle);
+
+    const tdCompany = document.createElement('td');
+    if (j.company_name) {
+      tdCompany.textContent = j.company_name;
+    } else {
+      tdCompany.innerHTML = '<span style="color:#ef4444">❌ 없음</span>';
+    }
+    tr.appendChild(tdCompany);
+
+    const tdSource = document.createElement('td');
+    tdSource.textContent = j.source_site_name || '';
+    tr.appendChild(tdSource);
+
+    const tdDeadline = document.createElement('td');
+    if (!j.deadline) tdDeadline.className = 'empty';
+    tdDeadline.textContent = j.deadline ? j.deadline.slice(0, 10) : '❌';
+    tr.appendChild(tdDeadline);
+
+    const tdReasons = document.createElement('td');
+    if (j.reasons && j.reasons.length > 0) {
+      j.reasons.forEach(r => {
+        const span = document.createElement('span');
+        span.className = 'reason-tag';
+        span.textContent = r;
+        tdReasons.appendChild(span);
+        tdReasons.appendChild(document.createTextNode(' '));
+      });
+    }
+    tr.appendChild(tdReasons);
+
+    const tdRelated = document.createElement('td');
+    if (j.relatedTables && j.relatedTables.length > 0) {
+      tdRelated.appendChild(document.createTextNode('⚠️ '));
+      j.relatedTables.forEach(t => {
+        const span = document.createElement('span');
+        span.className = 'warn-tag';
+        span.textContent = t;
+        tdRelated.appendChild(span);
+        tdRelated.appendChild(document.createTextNode(' '));
+      });
+    } else {
+      tdRelated.innerHTML = '<span style="color:#aaa;font-size:12px">없음</span>';
+    }
+    tr.appendChild(tdRelated);
+
+    const tdUrl = document.createElement('td');
+    const a = document.createElement('a');
+    a.textContent = '링크';
+    a.target = '_blank';
+    let safeUrl = j.source_url || '#';
+    try {
+      const parsed = new URL(safeUrl);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        safeUrl = '#'; // deny javascript: or data: etc
+      }
+    } catch(e) {
+      safeUrl = '#'; // deny invalid URL syntax
+    }
+    a.href = safeUrl;
+    tdUrl.appendChild(a);
+    tr.appendChild(tdUrl);
+
+    tbody.appendChild(tr);
+  });
 }
 
 function toggleAll(checkbox) {

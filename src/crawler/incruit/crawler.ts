@@ -4,11 +4,10 @@ import iconv from "iconv-lite";
 import { KEYWORDS } from "../../config/keywords";
 import { CrawledJob } from "../../../types";
 
-
 const getUrl = (keyword: string) =>
   `https://job.incruit.com/jobdb_list/searchjob.asp?col=job_all&kw=${encodeURIComponent(keyword)}`;
 
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 const cleanText = (text: string): string => {
   return text
@@ -94,8 +93,8 @@ const toBullet = (text: string): string => {
     .replace(/[-•·■□▶]/g, "\n- ")
     .replace(/\s{2,}/g, "\n")
     .split("\n")
-    .map(v => v.trim())
-    .filter(v => v.length > 5)
+    .map((v) => v.trim())
+    .filter((v) => v.length > 5)
     .join("\n");
 };
 
@@ -112,15 +111,30 @@ const parseJobContent = (rawText: string) => {
   const cleaned = cleanText(rawText);
   const sections = splitSections(cleaned);
 
+  if (!sections.requirements || !sections.preferred) {
+    const rawNormalized = rawText
+      .replace(/\s+/g, " ")
+      .replace(/모집부문\s*담당업무\s*자격요건\s*인원/g, "");
+
+    if (!sections.requirements) {
+      const m = rawNormalized.match(
+        /\[자격\s?요건[^\]]*\]([\s\S]*?)(?=\[우대|\[근무|\[접수|\[담당|$)/,
+      );
+      if (m?.[1]) sections.requirements = m[1].trim();
+    }
+    if (!sections.preferred) {
+      const m = rawNormalized.match(
+        /\[우대\s?사항[^\]]*\]([\s\S]*?)(?=\[자격|\[근무|\[접수|\[담당|$)/,
+      );
+      if (m?.[1]) sections.preferred = m[1].trim();
+    }
+  }
+
   const requirements = toBullet(sections.requirements || "");
   const preferred = toBullet(sections.preferred || "");
   const fallback = toBullet(extractMainContent(cleaned));
 
-  return {
-    requirements,
-    preferred,
-    fallback,
-  };
+  return { requirements, preferred, fallback };
 };
 
 export const crawlIncruit = async (): Promise<CrawledJob[]> => {
@@ -150,8 +164,11 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
           ? link
           : `https://job.incruit.com${link}`;
 
-        const company = $(el).find(".cell_first a").text().replace(/\s+/g, " ").trim();
-
+        const company = $(el)
+          .find(".cell_first a")
+          .text()
+          .replace(/\s+/g, " ")
+          .trim();
 
         const conditionText = $(el)
           .find(".cell_mid")
@@ -165,16 +182,25 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
           .trim();
 
         const locationMatch = cleaned.match(
-          /(서울|경기|인천|부산|대전|대구|광주|울산)[^\|,]*/
+          /(서울|경기|인천|부산|대전|대구|광주|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주|전국)[^\|,]*/,
         );
+        const location = locationMatch
+          ? locationMatch[0]
+              .replace(
+                /(경력|신입|인턴|대졸|학사|석사|정규직|계약직|무관).*/g,
+                "",
+              )
+              .trim()
+          : "";
 
         const experienceMatch = cleaned.match(
-          /(경력\s?\d+~\d+년|경력\s?\d+년\s?↑|신입무관|경력무관|신입|인턴|경력)/
+          /(경력\s?\d+~\d+년|경력\s?\d+년\s?↑|신입무관|경력무관|신입|인턴|경력)/,
         );
         const rawDeadline = $(el).find(".cell_last").text();
 
-        const externalId =
-          fullUrl.match(/jobdb_info\/jobpost\.asp\?job=(\d+)/)?.[1];
+        const externalId = fullUrl.match(
+          /jobdb_info\/jobpost\.asp\?job=(\d+)/,
+        )?.[1];
 
         if (!externalId) return;
 
@@ -182,7 +208,7 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
           externalId,
           title,
           company,
-          location: locationMatch ? locationMatch[0] : "",
+          location: location,
           experience: experienceMatch ? experienceMatch[0] : "",
           deadline: rawDeadline.replace(/\s+/g, " ").trim(),
           url: fullUrl,
@@ -198,9 +224,16 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
         try {
           await delay(200);
 
-          const res = await axios.get(job.url, {
+          const cleanUrl = job.url.replace(/[?&]src=[^&]*/g, "");
+          const res = await axios.get(cleanUrl, {
             responseType: "arraybuffer",
-            timeout: 10000,
+            timeout: 15000,
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              Referer: "https://job.incruit.com/",
+              "Accept-Language": "ko-KR,ko;q=0.9",
+            },
           });
 
           const html = iconv.decode(res.data, "euc-kr");
@@ -210,12 +243,12 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
           const logoSrc = $(".jcinfo_logo img").attr("src");
 
           if (logoSrc) {
-            logo = logoSrc.startsWith("http")
-              ? logoSrc
-              : `https:${logoSrc}`;
+            logo = logoSrc.startsWith("http") ? logoSrc : `https:${logoSrc}`;
           }
 
-          const iframeSrc = $("iframe[src*='jobpostcont']").attr("src");
+          const iframeSrc =
+            $("iframe[src*='jobpostcont']").attr("src") ||
+            $("iframe").first().attr("src");
 
           let rawText = "";
 
@@ -226,52 +259,82 @@ export const crawlIncruit = async (): Promise<CrawledJob[]> => {
 
             const iframeRes = await axios.get(iframeUrl, {
               responseType: "arraybuffer",
-              timeout: 10000,
+              timeout: 15000,
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                Referer: "https://job.incruit.com/",
+              },
             });
 
             const iframeHtml = iconv.decode(iframeRes.data, "euc-kr");
             const $$ = cheerio.load(iframeHtml);
 
             $$("style, script").remove();
-            rawText = $$("body").text();
+            rawText =
+              $$(
+                ".job_cont, .jobview, #job_detail, .content, .view_cont, .detail_view",
+              ).text() || $$("body").text();
           } else {
             $("style, script").remove();
-            rawText = $("body").text();
+            rawText =
+              $(
+                ".job_cont, .jobview, #job_detail, .content, .view_cont, .detail_view",
+              ).text() || $("body").text();
           }
 
-        const parsed = parseJobContent(rawText);
+          const parsed = parseJobContent(rawText);
 
-        const cleanSection = (text: string) =>
-          text
-            .replace(/^[^\[\]\n]*\]\s*/gm, "")
-            .replace(/^[\-\]}{>:\s]+/gm, "")
-            .trim();
+          const cleanSection = (text: string) =>
+            text
+              .replace(/^[^\[\]\n]*\]\s*/gm, "")
+              .replace(/^[\-\]}{>:\s]+/gm, "")
+              .trim();
 
-        const reqCleaned = cleanSection(parsed.requirements);
-        const requirements = reqCleaned.length < 10 ? "" : reqCleaned;
-        const prefCleaned = cleanSection(parsed.preferred);
-        const preferred = prefCleaned.length < 10 ? "" : prefCleaned;
+          const reqCleaned = cleanSection(parsed.requirements);
+          const requirements = reqCleaned.length < 10 ? "" : reqCleaned;
+          const prefCleaned = cleanSection(parsed.preferred);
+          const preferred = prefCleaned.length < 10 ? "" : prefCleaned;
 
-        job.requirements = requirements;
-        job.preferred = preferred;
-        job.companyLogo = logo;
+          job.requirements = requirements;
+          job.preferred = preferred;
+          job.companyLogo = logo;
 
-        job.content = [
-          requirements && `자격요건\n${requirements}`,
-          preferred && `우대사항\n${preferred}`,
-          (!requirements && !preferred) && `상세내용\n${parsed.fallback}`,
-        ]
-          .filter(Boolean)
-          .join("\n\n");
+          if (!job.location) {
+            const detailLocationText = $(
+              ".jcinfo_detail li, .jcinfo_list li, .tb_detail td, ul.jc_list li",
+            )
+              .map((_, el) => $(el).text().trim())
+              .get()
+              .find((text) =>
+                /(서울|경기|인천|부산|대전|대구|광주|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주|전국)/.test(
+                  text,
+                ),
+              );
 
+            const detailLocationMatch = detailLocationText
+              ? detailLocationText.match(
+                  /(서울|경기|인천|부산|대전|대구|광주|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주|전국)[^\n\t]*/,
+                )
+              : null;
 
+            if (detailLocationMatch)
+              job.location = detailLocationMatch[0].trim();
+          }
+
+          job.content = [
+            requirements && `자격요건\n${requirements}`,
+            preferred && `우대사항\n${preferred}`,
+            !requirements && !preferred && `상세내용\n${parsed.fallback}`,
+          ]
+            .filter(Boolean)
+            .join("\n\n");
         } catch (e: any) {
           console.error("상세 실패:", job.url, e.message);
         }
       }
 
       allJobs.push(...jobs);
-
     } catch (error: any) {
       console.error(`인크루트 키워드 실패: ${keyword}`, error.message);
       failedKeywords.push(keyword);

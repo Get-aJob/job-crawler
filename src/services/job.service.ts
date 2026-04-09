@@ -4,6 +4,16 @@ import { mapToJobPosting } from "../utils/mapper";
 
 const CREATED_BY = "890133b0-bb6c-4cdf-a7b9-fb1a181d8bbe"; 
 
+const BLACKLIST_PATTERNS = [
+   "써치", "헤드헌터",
+  "HR컨설팅", "에이치알컨설팅",
+  "스카우트",
+  "호텔", "리조트", "골프", "레저", "관광",
+];
+
+const isBlacklisted = (companyName: string) =>
+  BLACKLIST_PATTERNS.some(p => companyName.includes(p));
+
 const dedupeJobs = (jobs: CrawledJob[], source: string): CrawledJob[] => {
   const map = new Map<string, CrawledJob>();
 
@@ -39,8 +49,13 @@ export const insertJobs = async (
             source_url: row.source_url,
             external_id: row.external_id,
           });
+          return false;
         }
-        return isValid;
+        if (isBlacklisted(row.company_name)) {
+          console.warn(`[${source}] 블랙리스트 회사 스킵:`, row.company_name);
+          return false;
+        }
+        return true;
       })
     : rows;
 

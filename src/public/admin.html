@@ -688,9 +688,18 @@
           filtered = allJobs.filter((j) => !j.requirements);
         } else if (filter === "no-deadline") {
           filtered = allJobs.filter((j) => !j.deadline);
-        } else if (filter === "no-required") {
-          filtered = allJobs.filter(
-            (j) => !j.title || !j.company || !j.url || !j.externalId,
+        } else if (filter === 'no-required') {
+          const BLACKLIST_PATTERNS = [
+            "써치", "헤드헌터",
+            "HR컨설팅", "에이치알컨설팅",
+            "스카우트",
+            "호텔", "리조트", "골프", "레저", "관광",
+          ];
+          const isBlacklisted = (company) =>
+            BLACKLIST_PATTERNS.some(p => company?.includes(p));
+
+          filtered = allJobs.filter(j =>
+            !j.title || !j.company || !j.url || !j.externalId || isBlacklisted(j.company)
           );
         }
         renderJobsTable(filtered);

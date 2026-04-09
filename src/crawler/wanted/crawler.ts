@@ -16,8 +16,22 @@ const formatCareer = (career: any) => {
   return "";
 };
 
+const fetchBuildId = async (): Promise<string | null> => {
+  try {
+    const res = await axios.get("https://www.wanted.co.kr/", {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      timeout: 10000,
+    });
+    const match = res.data.match(/"buildId":"([^"]+)"/);
+    return match ? match[1] : null;
+  } catch (e) {
+    return null;
+  }
+};
 
-const fetchWantedDetail = async (jobId: number, buildId: string) => {
+let currentBuildId = "";
+
+const fetchWantedDetail = async (jobId: number, buildId: string, retry = true): Promise<{ experience: string; deadline: string; companyLogo: string; requirements: string; preferred: string; location: string } | null> => {
   try {
     const res = await axios.get(
       `https://www.wanted.co.kr/_next/data/${buildId}/wd/${jobId}.json?jobId=${jobId}`,
@@ -35,40 +49,39 @@ const fetchWantedDetail = async (jobId: number, buildId: string) => {
 
     const { requirements, preferred_points, company, career, confirm_time, close_time, due_time, address } = data;
 
-  return {
-    experience: formatCareer(career),
-    deadline: close_time || due_time || confirm_time || "",
-    companyLogo: company?.logo_image || "",
-    requirements: requirements || "",
-    preferred: preferred_points || "",
-    location: address?.full_location || address?.location || "",
-  };
-  } catch (e) {
+    return {
+      experience: formatCareer(career),
+      deadline: close_time || due_time || confirm_time || "",
+      companyLogo: company?.logo_image || "",
+      requirements: requirements || "",
+      preferred: preferred_points || "",
+      location: address?.full_location || address?.location || "",
+    };
+  } catch (e: any) {
+    if (retry && e.response?.status === 404) {
+      console.warn("원티드 buildId 만료, 갱신 시도...");
+      const newBuildId = await fetchBuildId();
+      if (newBuildId) {
+        currentBuildId = newBuildId;
+        return fetchWantedDetail(jobId, newBuildId, false);
+      }
+    }
     console.error("상세 실패:", jobId);
     return null;
   }
 };
 
 
+
 export const crawlWanted = async (): Promise<CrawledJob[]> => {
   const allJobs: CrawledJob[] = [];
 
-  let buildId: string;
-  try {
-    const sampleRes = await axios.get("https://www.wanted.co.kr/", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      timeout: 10000,
-    });
-    const buildIdMatch = sampleRes.data.match(/"buildId":"([^"]+)"/);
-    if (!buildIdMatch) {
-      console.error("원티드 buildId 추출 실패");
-      return [];
-    }
-    buildId = buildIdMatch[1];
-  } catch (e: any) {
-    console.error("원티드 buildId 요청 실패:", e.message);
-    return [];
-  }
+const initialBuildId = await fetchBuildId();
+if (!initialBuildId) {
+  console.error("원티드 buildId 추출 실패");
+  return [];
+}
+currentBuildId = initialBuildId;
 
   for (const keyword of KEYWORDS) {
     try {
@@ -96,7 +109,7 @@ export const crawlWanted = async (): Promise<CrawledJob[]> => {
       for (const item of rawJobs) {
         let detail = null;
         try {
-          detail = await fetchWantedDetail(item.id, buildId);
+          detail = await fetchWantedDetail(item.id, currentBuildId);
           await new Promise((resolve) => setTimeout(resolve, 200));
         } catch (e: any) {
           console.error("상세 실패:", item.id, e.message);

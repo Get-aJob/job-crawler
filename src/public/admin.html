@@ -1,456 +1,617 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>크롤러 어드민</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f5f5f5;
-      color: #333;
-    }
-
-    header {
-      background: #1a1a2e;
-      color: white;
-      padding: 16px 32px;
-      font-size: 18px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-    }
-
-    .tabs {
-      display: flex;
-      background: white;
-      border-bottom: 2px solid #e0e0e0;
-      padding: 0 32px;
-    }
-
-    .tab {
-      padding: 14px 24px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      color: #888;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -2px;
-      transition: all 0.2s;
-    }
-
-    .tab.active {
-      color: #1a1a2e;
-      border-bottom-color: #1a1a2e;
-    }
-
-    .tab-content { display: none; padding: 32px; }
-    .tab-content.active { display: block; }
-
-    .card {
-      background: white;
-      border-radius: 8px;
-      padding: 24px;
-      margin-bottom: 24px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-
-    .card h3 {
-      font-size: 15px;
-      color: #555;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #f0f0f0;
-    }
-
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    select, button {
-      padding: 10px 16px;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    select {
-      border: 1px solid #ddd;
-      background: white;
-      color: #333;
-      min-width: 180px;
-    }
-
-    button {
-      background: #1a1a2e;
-      color: white;
-      border: none;
-      font-weight: 500;
-      transition: opacity 0.2s;
-    }
-
-    button:hover { opacity: 0.85; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .summary-item {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 16px;
-      text-align: center;
-    }
-
-    .summary-item .value {
-      font-size: 28px;
-      font-weight: bold;
-      color: #1a1a2e;
-    }
-
-    .summary-item .label {
-      font-size: 12px;
-      color: #888;
-      margin-top: 4px;
-    }
-
-    .quality-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 12px;
-    }
-
-    .quality-item {
-      background: #f8f9fa;
-      border-radius: 6px;
-      padding: 12px;
-      text-align: center;
-    }
-
-    .quality-item .q-count {
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    .quality-item .q-count.ok { color: #22c55e; }
-    .quality-item .q-count.warn { color: #f59e0b; }
-    .quality-item .q-count.bad { color: #ef4444; }
-
-    .quality-item .q-label {
-      font-size: 12px;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    .keyword-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .keyword-tag {
-      background: #e8eaf6;
-      color: #3949ab;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-    }
-
-    .table-wrap {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    th {
-      background: #f8f9fa;
-      padding: 10px 12px;
-      text-align: left;
-      font-weight: 600;
-      color: #555;
-      border-bottom: 2px solid #e0e0e0;
-      white-space: nowrap;
-    }
-
-    td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #f0f0f0;
-      max-width: 240px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    tr:hover td { background: #fafafa; }
-
-    td.empty {
-      background: #fff5f5;
-      color: #ef4444;
-      font-size: 12px;
-    }
-
-    td a {
-      color: #3949ab;
-      text-decoration: none;
-    }
-
-    td a:hover { text-decoration: underline; }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .badge-ok { background: #dcfce7; color: #16a34a; }
-    .badge-empty { background: #fee2e2; color: #dc2626; }
-
-    .date-table td:first-child { font-weight: 500; }
-    .date-table .bar-cell { width: 200px; }
-
-    .bar {
-      height: 16px;
-      background: #c7d2fe;
-      border-radius: 3px;
-      transition: width 0.3s;
-    }
-
-    .source-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 12px;
-    }
-
-    .source-card {
-      background: #f0f4ff;
-      border-radius: 8px;
-      padding: 16px;
-      text-align: center;
-    }
-
-    .source-card .s-name {
-      font-size: 13px;
-      color: #555;
-      text-transform: capitalize;
-    }
-
-    .source-card .s-count {
-      font-size: 26px;
-      font-weight: bold;
-      color: #3949ab;
-      margin-top: 4px;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 48px;
-      color: #aaa;
-      font-size: 14px;
-    }
-
-    .error-msg {
-      background: #fff5f5;
-      border: 1px solid #fecaca;
-      color: #dc2626;
-      padding: 12px 16px;
-      border-radius: 6px;
-      font-size: 13px;
-    }
-
-    .result-count {
-      font-size: 13px;
-      color: #888;
-      margin-bottom: 12px;
-    }
-
-    .filter-bar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
-    .filter-btn {
-      background: #f0f0f0;
-      color: #555;
-      border: 1px solid #ddd;
-      padding: 6px 14px;
-      font-size: 12px;
-      border-radius: 20px;
-    }
-
-    .filter-btn.active {
-      background: #1a1a2e;
-      color: white;
-      border-color: #1a1a2e;
-    }
-
-    .reason-tag {
-  display: inline-block;
-  background: #fee2e2;
-  color: #dc2626;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  margin-right: 4px;
-}
-
-  .danger-btn {
-    background: #dc2626;
-  }
-  .warn-tag {
-    display: inline-block;
-    background: #fef3c7;
-    color: #d97706;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-right: 4px;
-  }
-  </style>
-</head>
-<body>
-
-<header>🕷️ 크롤러 어드민</header>
-
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('test')">크롤링 테스트</div>
-  <div class="tab" onclick="switchTab('stats')">DB 현황</div>
-  <div class="tab" onclick="switchTab('url')">단일 URL 테스트</div>
-</div>
-
-<div id="tab-test" class="tab-content active">
-
-  <div class="card">
-    <h3>테스트 크롤링 (DB 저장 없음)</h3>
-    <div class="controls">
-      <select id="source-select">
-        <option value="wanted">원티드</option>
-        <option value="saramin">사람인</option>
-        <option value="incruit">인크루트</option>
-        <option value="jumpit">점핏</option>
-        <option value="all">전체 (all)</option>
-      </select>
-      <button id="run-btn" onclick="runTestCrawl()">▶ 크롤링 실행</button>
-    </div>
-  </div>
-
-  <div id="test-result"></div>
-</div>
-
-<div id="tab-stats" class="tab-content">
-  <div id="stats-result"><div class="loading">로딩 중...</div></div>
-  <div id="low-quality-section" style="margin-top:24px">
-  <div class="card">
-    <h3>저품질 공고 관리</h3>
-    <div class="controls">
-      <button onclick="loadLowQuality()">🔍 저품질 공고 조회</button>
-      <button class="danger-btn" id="delete-btn" onclick="deleteSelected()" disabled>🗑️ 선택 삭제</button>
-      <span id="low-quality-result" style="font-size:13px;color:#555"></span>
-    </div>
-  </div>
-  <div id="low-quality-table"></div>
-</div>
-
-</div>
-
-<div id="tab-url" class="tab-content">
-  <div class="card">
-    <h3>단일 URL 크롤링 테스트 (DB 저장 없음)</h3>
-    <div class="controls">
-      <input id="url-input" type="text" placeholder="채용공고 URL 입력"
-        style="flex:1; padding:10px 14px; border:1px solid #ddd;
-               border-radius:6px; font-size:14px; min-width:300px;">
-      <button onclick="runUrlCrawl()">▶ 테스트</button>
-    </div>
-  </div>
-  <div id="url-result"></div>
-</div>
-
-
-<script>
-  let allJobs = [];
-  let currentFilter = 'all';
-  let currentSnapshotId = null;
-
-  function switchTab(name) {
-    document.querySelectorAll('.tab').forEach((t, i) => {
-      t.classList.toggle('active', ['test','stats','url'][i] === name);
-    });
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-
-    if (name === 'stats') loadStats();
-  }
-
-  async function runTestCrawl() {
-    const source = document.getElementById('source-select').value;
-    const btn = document.getElementById('run-btn');
-    const resultEl = document.getElementById('test-result');
-
-    btn.disabled = true;
-    btn.textContent = '크롤링 중...';
-    resultEl.innerHTML = '<div class="loading">크롤링 중입니다. 잠시만 기다려주세요...</div>';
-
-    try {
-      const res = await fetch('/admin/test-crawl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || err.error || '크롤링 실패');
+  <head>
+    <meta charset="UTF-8" />
+    <title>크롤러 어드민</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
 
-      const data = await res.json();
-      allJobs = data.jobs;
-      currentSnapshotId = data.snapshotId;
-      currentFilter = 'all';
-      renderTestResult(data);
-    } catch (e) {
-      resultEl.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '▶ 크롤링 실행';
-    }
-  }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f5f5;
+        color: #333;
+      }
 
-  function renderTestResult(data) {
-    const { total, keywordStats, fieldQuality, jobs } = data;
+      header {
+        background: #1a1a2e;
+        color: white;
+        padding: 16px 32px;
+        font-size: 18px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+      }
 
-    const qualityItems = Object.entries(fieldQuality).map(([field, emptyCount]) => {
-      const ratio = total > 0 ? emptyCount / total : 0;
-      const cls = ratio === 0 ? 'ok' : ratio < 0.3 ? 'warn' : 'bad';
-      return `
+      .tabs {
+        display: flex;
+        background: white;
+        border-bottom: 2px solid #e0e0e0;
+        padding: 0 32px;
+      }
+
+      .tab {
+        padding: 14px 24px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #888;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+      }
+
+      .tab.active {
+        color: #1a1a2e;
+        border-bottom-color: #1a1a2e;
+      }
+
+      .tab-content {
+        display: none;
+        padding: 32px;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
+      .card {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
+
+      .card h3 {
+        font-size: 15px;
+        color: #555;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      select,
+      button {
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      select {
+        border: 1px solid #ddd;
+        background: white;
+        color: #333;
+        min-width: 180px;
+      }
+
+      button {
+        background: #1a1a2e;
+        color: white;
+        border: none;
+        font-weight: 500;
+        transition: opacity 0.2s;
+      }
+
+      button:hover {
+        opacity: 0.85;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .summary-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+      }
+
+      .summary-item .value {
+        font-size: 28px;
+        font-weight: bold;
+        color: #1a1a2e;
+      }
+
+      .summary-item .label {
+        font-size: 12px;
+        color: #888;
+        margin-top: 4px;
+      }
+
+      .quality-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 12px;
+      }
+
+      .quality-item {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 12px;
+        text-align: center;
+      }
+
+      .quality-item .q-count {
+        font-size: 20px;
+        font-weight: bold;
+      }
+
+      .quality-item .q-count.ok {
+        color: #22c55e;
+      }
+      .quality-item .q-count.warn {
+        color: #f59e0b;
+      }
+      .quality-item .q-count.bad {
+        color: #ef4444;
+      }
+
+      .quality-item .q-label {
+        font-size: 12px;
+        color: #666;
+        margin-top: 4px;
+      }
+
+      .keyword-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .keyword-tag {
+        background: #e8eaf6;
+        color: #3949ab;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th {
+        background: #f8f9fa;
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #555;
+        border-bottom: 2px solid #e0e0e0;
+        white-space: nowrap;
+      }
+
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      tr:hover td {
+        background: #fafafa;
+      }
+
+      td.empty {
+        background: #fff5f5;
+        color: #ef4444;
+        font-size: 12px;
+      }
+
+      td a {
+        color: #3949ab;
+        text-decoration: none;
+      }
+
+      td a:hover {
+        text-decoration: underline;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .badge-ok {
+        background: #dcfce7;
+        color: #16a34a;
+      }
+      .badge-empty {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+
+      .date-table td:first-child {
+        font-weight: 500;
+      }
+      .date-table .bar-cell {
+        width: 200px;
+      }
+
+      .bar {
+        height: 16px;
+        background: #c7d2fe;
+        border-radius: 3px;
+        transition: width 0.3s;
+      }
+
+      .source-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 12px;
+      }
+
+      .source-card {
+        background: #f0f4ff;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+      }
+
+      .source-card .s-name {
+        font-size: 13px;
+        color: #555;
+        text-transform: capitalize;
+      }
+
+      .source-card .s-count {
+        font-size: 26px;
+        font-weight: bold;
+        color: #3949ab;
+        margin-top: 4px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 48px;
+        color: #aaa;
+        font-size: 14px;
+      }
+
+      .error-msg {
+        background: #fff5f5;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+      }
+
+      .result-count {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 12px;
+      }
+
+      .filter-bar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      .filter-btn {
+        background: #f0f0f0;
+        color: #555;
+        border: 1px solid #ddd;
+        padding: 6px 14px;
+        font-size: 12px;
+        border-radius: 20px;
+      }
+
+      .filter-btn.active {
+        background: #1a1a2e;
+        color: white;
+        border-color: #1a1a2e;
+      }
+
+      .reason-tag {
+        display: inline-block;
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-right: 4px;
+      }
+
+      .danger-btn {
+        background: #dc2626;
+      }
+      .warn-tag {
+        display: inline-block;
+        background: #fef3c7;
+        color: #d97706;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-right: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="auth-screen"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+      "
+    >
+      <div
+        style="
+          background: white;
+          padding: 32px;
+          border-radius: 8px;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+          width: 320px;
+        "
+      >
+        <h2 style="margin-bottom: 16px; font-size: 16px">
+          어드민 접근 키 입력
+        </h2>
+        <input
+          id="secret-input"
+          type="password"
+          placeholder="비밀키 입력"
+          style="
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 14px;
+          "
+        />
+        <button
+          onclick="submitSecret()"
+          style="
+            width: 100%;
+            padding: 10px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+          "
+        >
+          확인
+        </button>
+        <div
+          id="auth-error"
+          style="color: #dc2626; font-size: 13px; margin-top: 8px"
+        ></div>
+      </div>
+    </div>
+
+    <header>🕷️ 크롤러 어드민</header>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('test')">크롤링 테스트</div>
+      <div class="tab" onclick="switchTab('stats')">DB 현황</div>
+      <div class="tab" onclick="switchTab('url')">단일 URL 테스트</div>
+    </div>
+
+    <div id="tab-test" class="tab-content active">
+      <div class="card">
+        <h3>테스트 크롤링 (DB 저장 없음)</h3>
+        <div class="controls">
+          <select id="source-select">
+            <option value="wanted">원티드</option>
+            <option value="saramin">사람인</option>
+            <option value="incruit">인크루트</option>
+            <option value="jumpit">점핏</option>
+            <option value="all">전체 (all)</option>
+          </select>
+          <button id="run-btn" onclick="runTestCrawl()">▶ 크롤링 실행</button>
+        </div>
+      </div>
+
+      <div id="test-result"></div>
+    </div>
+
+    <div id="tab-stats" class="tab-content">
+      <div id="stats-result"><div class="loading">로딩 중...</div></div>
+      <div id="low-quality-section" style="margin-top: 24px">
+        <div class="card">
+          <h3>저품질 공고 관리</h3>
+          <div class="controls">
+            <button onclick="loadLowQuality()">🔍 저품질 공고 조회</button>
+            <button
+              class="danger-btn"
+              id="delete-btn"
+              onclick="deleteSelected()"
+              disabled
+            >
+              🗑️ 선택 삭제
+            </button>
+            <span
+              id="low-quality-result"
+              style="font-size: 13px; color: #555"
+            ></span>
+          </div>
+        </div>
+        <div id="low-quality-table"></div>
+      </div>
+    </div>
+
+    <div id="tab-url" class="tab-content">
+      <div class="card">
+        <h3>단일 URL 크롤링 테스트 (DB 저장 없음)</h3>
+        <div class="controls">
+          <input
+            id="url-input"
+            type="text"
+            placeholder="채용공고 URL 입력"
+            style="
+              flex: 1;
+              padding: 10px 14px;
+              border: 1px solid #ddd;
+              border-radius: 6px;
+              font-size: 14px;
+              min-width: 300px;
+            "
+          />
+          <button onclick="runUrlCrawl()">▶ 테스트</button>
+        </div>
+      </div>
+      <div id="url-result"></div>
+    </div>
+
+    <script>
+      function getSecret() {
+        return sessionStorage.getItem("adminSecret");
+      }
+
+      function submitSecret() {
+        const val = document.getElementById("secret-input").value.trim();
+        if (!val) return;
+        sessionStorage.setItem("adminSecret", val);
+        checkAuth();
+      }
+
+      async function checkAuth() {
+        const secret = getSecret();
+        if (!secret) {
+          document.getElementById("auth-screen").style.display = "flex";
+          return;
+        }
+        const res = await fetch("/admin/stats", {
+          headers: { "x-admin-secret": secret },
+        });
+        if (res.status === 401) {
+          sessionStorage.removeItem("adminSecret");
+          document.getElementById("auth-error").textContent =
+            "비밀키가 올바르지 않습니다.";
+          document.getElementById("auth-screen").style.display = "flex";
+        } else {
+          document.getElementById("auth-screen").style.display = "none";
+        }
+      }
+
+      function adminFetch(url, options = {}) {
+        return fetch(url, {
+          ...options,
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-secret": getSecret(),
+            ...(options.headers || {}),
+          },
+        });
+      }
+
+      checkAuth();
+
+      let allJobs = [];
+      let currentFilter = "all";
+      let currentSnapshotId = null;
+
+      function switchTab(name) {
+        document.querySelectorAll(".tab").forEach((t, i) => {
+          t.classList.toggle("active", ["test", "stats", "url"][i] === name);
+        });
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((c) => c.classList.remove("active"));
+        document.getElementById("tab-" + name).classList.add("active");
+
+        if (name === "stats") loadStats();
+      }
+
+      async function runTestCrawl() {
+        const source = document.getElementById("source-select").value;
+        const btn = document.getElementById("run-btn");
+        const resultEl = document.getElementById("test-result");
+
+        btn.disabled = true;
+        btn.textContent = "크롤링 중...";
+        resultEl.innerHTML =
+          '<div class="loading">크롤링 중입니다. 잠시만 기다려주세요...</div>';
+
+        try {
+          const res = await adminFetch("/admin/test-crawl", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ source }),
+          });
+
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || err.error || "크롤링 실패");
+          }
+
+          const data = await res.json();
+          allJobs = data.jobs;
+          currentSnapshotId = data.snapshotId;
+          currentFilter = "all";
+          renderTestResult(data);
+        } catch (e) {
+          resultEl.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "▶ 크롤링 실행";
+        }
+      }
+
+      function renderTestResult(data) {
+        const { total, keywordStats, fieldQuality, jobs } = data;
+
+        const qualityItems = Object.entries(fieldQuality)
+          .map(([field, emptyCount]) => {
+            const ratio = total > 0 ? emptyCount / total : 0;
+            const cls = ratio === 0 ? "ok" : ratio < 0.3 ? "warn" : "bad";
+            return `
         <div class="quality-item">
           <div class="q-count ${cls}">${emptyCount}</div>
           <div class="q-label">${field} 누락</div>
         </div>`;
-    }).join('');
+          })
+          .join("");
 
-    const keywordTagsHtml = Object.entries(keywordStats).map(([kw, count]) =>
-      `<span class="keyword-tag">${kw} · ${count}건</span>`
-    ).join('');
+        const keywordTagsHtml = Object.entries(keywordStats)
+          .map(
+            ([kw, count]) =>
+              `<span class="keyword-tag">${kw} · ${count}건</span>`,
+          )
+          .join("");
 
-    const resultEl = document.getElementById('test-result');
-    resultEl.innerHTML = `
+        const resultEl = document.getElementById("test-result");
+        resultEl.innerHTML = `
       <div class="card">
         <h3>수집 결과 요약</h3>
         <div class="summary-grid">
@@ -500,67 +661,86 @@
 
     `;
 
-    renderJobsTable(jobs);
-  }
+        renderJobsTable(jobs);
+      }
 
-  function applyFilter(filter, btnEl) {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btnEl.classList.add('active');
+      function applyFilter(filter, btnEl) {
+        currentFilter = filter;
+        document
+          .querySelectorAll(".filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btnEl.classList.add("active");
 
-    let filtered = allJobs;
-    if (filter === 'empty') {
-      filtered = allJobs.filter(j =>
-        !j.title || !j.company || !j.location || !j.experience ||
-        !j.companyLogo || !j.requirements || !j.preferred || !j.deadline
-      );
-    } else if (filter === 'no-requirements') {
-      filtered = allJobs.filter(j => !j.requirements);
-    } else if (filter === 'no-deadline') {
-      filtered = allJobs.filter(j => !j.deadline);
-    } else if (filter === 'no-required') {
-      filtered = allJobs.filter(j =>
-        !j.title || !j.company || !j.url || !j.externalId
-      );
-    }
-    renderJobsTable(filtered);
-  }
+        let filtered = allJobs;
+        if (filter === "empty") {
+          filtered = allJobs.filter(
+            (j) =>
+              !j.title ||
+              !j.company ||
+              !j.location ||
+              !j.experience ||
+              !j.companyLogo ||
+              !j.requirements ||
+              !j.preferred ||
+              !j.deadline,
+          );
+        } else if (filter === "no-requirements") {
+          filtered = allJobs.filter((j) => !j.requirements);
+        } else if (filter === "no-deadline") {
+          filtered = allJobs.filter((j) => !j.deadline);
+        } else if (filter === "no-required") {
+          filtered = allJobs.filter(
+            (j) => !j.title || !j.company || !j.url || !j.externalId,
+          );
+        }
+        renderJobsTable(filtered);
+      }
 
-  function renderJobsTable(jobs) {
-    const wrap = document.getElementById('jobs-table-wrap');
-    if (!wrap) return;
+      function renderJobsTable(jobs) {
+        const wrap = document.getElementById("jobs-table-wrap");
+        if (!wrap) return;
 
-    if (jobs.length === 0) {
-      wrap.innerHTML = '<div class="loading">표시할 공고가 없습니다.</div>';
-      return;
-    }
+        if (jobs.length === 0) {
+          wrap.innerHTML = '<div class="loading">표시할 공고가 없습니다.</div>';
+          return;
+        }
 
-    const rows = jobs.map(j => `
+        const rows = jobs
+          .map(
+            (j) => `
       <tr>
-        <td title="${j.title || ''}">${j.title || '<span style="color:#ef4444">❌ 없음</span>'}</td>
+        <td title="${j.title || ""}">${j.title || '<span style="color:#ef4444">❌ 없음</span>'}</td>
         <td>${j.company || '<span style="color:#ef4444">❌ 없음</span>'}</td>
-        <td class="${!j.location ? 'empty' : ''}">${j.location || '❌'}</td>
-        <td class="${!j.experience ? 'empty' : ''}">${j.experience || '❌'}</td>
-        <td class="${!j.deadline ? 'empty' : ''}">${j.deadline ? j.deadline.slice(0, 10) : '❌'}</td>
-        <td>${j.requirements
-          ? `<span class="badge badge-ok">✓</span>`
-          : `<span class="badge badge-empty">없음</span>`}
+        <td class="${!j.location ? "empty" : ""}">${j.location || "❌"}</td>
+        <td class="${!j.experience ? "empty" : ""}">${j.experience || "❌"}</td>
+        <td class="${!j.deadline ? "empty" : ""}">${j.deadline ? j.deadline.slice(0, 10) : "❌"}</td>
+        <td>${
+          j.requirements
+            ? `<span class="badge badge-ok">✓</span>`
+            : `<span class="badge badge-empty">없음</span>`
+        }
         </td>
-        <td>${j.preferred
-          ? `<span class="badge badge-ok">✓</span>`
-          : `<span class="badge badge-empty">없음</span>`}
+        <td>${
+          j.preferred
+            ? `<span class="badge badge-ok">✓</span>`
+            : `<span class="badge badge-empty">없음</span>`
+        }
         </td>
-        <td class="${!j.companyLogo ? 'empty' : ''}">
-          ${j.companyLogo
-            ? `<img src="${j.companyLogo}" style="height:20px;border-radius:3px" onerror="this.outerHTML='❌'">`
-            : '❌'}
+        <td class="${!j.companyLogo ? "empty" : ""}">
+          ${
+            j.companyLogo
+              ? `<img src="${j.companyLogo}" style="height:20px;border-radius:3px" onerror="this.outerHTML='❌'">`
+              : "❌"
+          }
         </td>
         <td><a href="${j.url}" target="_blank">링크</a></td>
-        <td>${j.keyword || ''}</td>
+        <td>${j.keyword || ""}</td>
       </tr>
-    `).join('');
+    `,
+          )
+          .join("");
 
-    wrap.innerHTML = `
+        wrap.innerHTML = `
       <div class="result-count">${jobs.length}건 표시 중</div>
       <div class="table-wrap">
         <table>
@@ -582,56 +762,65 @@
         </table>
       </div>
     `;
-  }
+      }
 
-  async function loadStats() {
-    const el = document.getElementById('stats-result');
-    el.innerHTML = '<div class="loading">통계 불러오는 중...</div>';
+      async function loadStats() {
+        const el = document.getElementById("stats-result");
+        el.innerHTML = '<div class="loading">통계 불러오는 중...</div>';
 
-    try {
-      const res = await fetch('/admin/stats');
-      if (!res.ok) throw new Error('통계 조회 실패');
-      const data = await res.json();
-      renderStats(data);
-    } catch (e) {
-      el.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
-    }
-  }
+        try {
+          const res = await adminFetch("/admin/stats");
+          if (!res.ok) throw new Error("통계 조회 실패");
+          const data = await res.json();
+          renderStats(data);
+        } catch (e) {
+          el.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
+        }
+      }
 
-  function renderStats(data) {
-    const { total, bySource, byDate, fieldQuality } = data;
+      function renderStats(data) {
+        const { total, bySource, byDate, fieldQuality } = data;
 
-    const sourceCards = Object.entries(bySource).map(([name, count]) => `
+        const sourceCards = Object.entries(bySource)
+          .map(
+            ([name, count]) => `
       <div class="source-card">
         <div class="s-name">${name}</div>
         <div class="s-count">${count}</div>
       </div>
-    `).join('');
+    `,
+          )
+          .join("");
 
-    const maxCount = Math.max(...Object.values(byDate).map(Number), 1);
-    const dateRows = Object.entries(byDate)
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([date, count]) => `
+        const maxCount = Math.max(...Object.values(byDate).map(Number), 1);
+        const dateRows = Object.entries(byDate)
+          .sort(([a], [b]) => b.localeCompare(a))
+          .map(
+            ([date, count]) => `
         <tr>
           <td>${date}</td>
           <td>${count}건</td>
           <td class="bar-cell">
-            <div class="bar" style="width:${Math.round((Number(count)/maxCount)*180)}px"></div>
+            <div class="bar" style="width:${Math.round((Number(count) / maxCount) * 180)}px"></div>
           </td>
         </tr>
-      `).join('');
+      `,
+          )
+          .join("");
 
-    const qualityItems = Object.entries(fieldQuality).map(([field, emptyCount]) => {
-      const ratio = total > 0 ? Number(emptyCount) / total : 0;
-      const cls = ratio === 0 ? 'ok' : ratio < 0.3 ? 'warn' : 'bad';
-      return `
+        const qualityItems = Object.entries(fieldQuality)
+          .map(([field, emptyCount]) => {
+            const ratio = total > 0 ? Number(emptyCount) / total : 0;
+            const cls = ratio === 0 ? "ok" : ratio < 0.3 ? "warn" : "bad";
+            return `
         <div class="quality-item">
           <div class="q-count ${cls}">${emptyCount}</div>
           <div class="q-label">${field} 누락</div>
         </div>`;
-    }).join('');
+          })
+          .join("");
 
-    document.getElementById('stats-result').innerHTML = `
+        document.getElementById("stats-result").innerHTML = `
       <div class="card">
         <h3>전체 자동 수집 공고 수</h3>
         <div style="font-size:36px;font-weight:bold;color:#1a1a2e">${total.toLocaleString()}건</div>
@@ -659,47 +848,48 @@
         <div class="quality-grid">${qualityItems}</div>
       </div>
     `;
-  }
+      }
 
-  async function runUrlCrawl() {
-  const url = document.getElementById('url-input').value.trim();
-  const resultEl = document.getElementById('url-result');
+      async function runUrlCrawl() {
+        const url = document.getElementById("url-input").value.trim();
+        const resultEl = document.getElementById("url-result");
 
-  if (!url) {
-    resultEl.innerHTML = '<div class="error-msg">URL을 입력해주세요.</div>';
-    return;
-  }
+        if (!url) {
+          resultEl.innerHTML =
+            '<div class="error-msg">URL을 입력해주세요.</div>';
+          return;
+        }
 
-  resultEl.innerHTML = '<div class="loading">크롤링 중...</div>';
+        resultEl.innerHTML = '<div class="loading">크롤링 중...</div>';
 
-  try {
-    const res = await fetch('/admin/test-crawl-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
+        try {
+          const res = await adminFetch("/admin/test-crawl-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || err.error);
-    }
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || err.error);
+          }
 
-    const { job, snapshotId } = await res.json();
+          const { job, snapshotId } = await res.json();
 
-    const fields = [
-      ['직무', job.title],
-      ['회사', job.company],
-      ['위치', job.location],
-      ['경력', job.experience],
-      ['마감일', job.deadline],
-      ['로고 URL', job.companyLogo],
-      ['자격요건', job.requirements],
-      ['우대사항', job.preferred],
-      ['URL', job.url],
-      ['externalId', job.externalId],
-    ];
+          const fields = [
+            ["직무", job.title],
+            ["회사", job.company],
+            ["위치", job.location],
+            ["경력", job.experience],
+            ["마감일", job.deadline],
+            ["로고 URL", job.companyLogo],
+            ["자격요건", job.requirements],
+            ["우대사항", job.preferred],
+            ["URL", job.url],
+            ["externalId", job.externalId],
+          ];
 
-    resultEl.innerHTML = `
+          resultEl.innerHTML = `
       <div class="card">
         <h3>크롤링 결과</h3>
         <div class="table-wrap">
@@ -712,117 +902,119 @@
       </div>
     `;
 
-    const tbody = resultEl.querySelector('#url-result-table tbody');
-    fields.forEach(([label, value]) => {
-      const tr = document.createElement('tr');
-      const tdLabel = document.createElement('td');
-      tdLabel.style.fontWeight = '600';
-      tdLabel.style.color = '#555';
-      tdLabel.style.width = '120px';
-      tdLabel.textContent = label;
-      
-      const tdValue = document.createElement('td');
-      tdValue.style.whiteSpace = 'pre-wrap';
-      tdValue.style.wordBreak = 'break-all';
-      if (!value) {
-        tdValue.className = 'empty';
-        tdValue.textContent = '❌ 없음';
-      } else {
-        tdValue.textContent = value;
+          const tbody = resultEl.querySelector("#url-result-table tbody");
+          fields.forEach(([label, value]) => {
+            const tr = document.createElement("tr");
+            const tdLabel = document.createElement("td");
+            tdLabel.style.fontWeight = "600";
+            tdLabel.style.color = "#555";
+            tdLabel.style.width = "120px";
+            tdLabel.textContent = label;
+
+            const tdValue = document.createElement("td");
+            tdValue.style.whiteSpace = "pre-wrap";
+            tdValue.style.wordBreak = "break-all";
+            if (!value) {
+              tdValue.className = "empty";
+              tdValue.textContent = "❌ 없음";
+            } else {
+              tdValue.textContent = value;
+            }
+
+            tr.appendChild(tdLabel);
+            tr.appendChild(tdValue);
+            tbody.appendChild(tr);
+          });
+
+          const saveBtn = resultEl.querySelector("#url-save-btn");
+          saveBtn.addEventListener("click", () => {
+            saveByUrl(snapshotId);
+          });
+        } catch (e) {
+          resultEl.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
+        }
       }
-      
-      tr.appendChild(tdLabel);
-      tr.appendChild(tdValue);
-      tbody.appendChild(tr);
-    });
+      async function saveCrawl() {
+        if (!currentSnapshotId)
+          return alert("테스트 크롤링을 먼저 실행해주세요.");
 
-    const saveBtn = resultEl.querySelector('#url-save-btn');
-    saveBtn.addEventListener('click', () => {
-      saveByUrl(snapshotId);
-    });
-  } catch (e) {
-    resultEl.innerHTML = `<div class="error-msg">❌ 오류: ${e.message}</div>`;
-  }
-}
-async function saveCrawl() {
-  if (!currentSnapshotId) return alert('테스트 크롤링을 먼저 실행해주세요.');
-  
-  const btn = document.getElementById('save-btn');
-  const resultEl = document.getElementById('save-result');
+        const btn = document.getElementById("save-btn");
+        const resultEl = document.getElementById("save-result");
 
-  btn.disabled = true;
-  btn.textContent = '저장 중...';
-  resultEl.textContent = '';
+        btn.disabled = true;
+        btn.textContent = "저장 중...";
+        resultEl.textContent = "";
 
-  try {
-    const res = await fetch('/admin/save-crawl', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ snapshotId: currentSnapshotId }),
-    });
+        try {
+          const res = await adminFetch("/admin/save-crawl", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ snapshotId: currentSnapshotId }),
+          });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.error);
-    resultEl.textContent = `✅ ${data.saved}건 저장 완료`;
-  } catch (e) {
-    resultEl.textContent = `❌ 저장 실패: ${e.message}`;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '💾 DB에 저장';
-  }
-}
-async function saveByUrl(snapshotId) {
-  const resultEl = document.getElementById('url-save-result');
-  resultEl.textContent = '저장 중...';
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || data.error);
+          resultEl.textContent = `✅ ${data.saved}건 저장 완료`;
+        } catch (e) {
+          resultEl.textContent = `❌ 저장 실패: ${e.message}`;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "💾 DB에 저장";
+        }
+      }
+      async function saveByUrl(snapshotId) {
+        const resultEl = document.getElementById("url-save-result");
+        resultEl.textContent = "저장 중...";
 
-  try {
-    const res = await fetch('/admin/save-crawl-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ snapshotId }),
-    });
+        try {
+          const res = await adminFetch("/admin/save-crawl-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ snapshotId }),
+          });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || data.error);
-    resultEl.textContent = `✅ 저장 완료: ${data.job.title}`;
-  } catch (e) {
-    resultEl.textContent = `❌ 저장 실패: ${e.message}`;
-  }
-}
-let lowQualityJobs = [];
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || data.error);
+          resultEl.textContent = `✅ 저장 완료: ${data.job.title}`;
+        } catch (e) {
+          resultEl.textContent = `❌ 저장 실패: ${e.message}`;
+        }
+      }
+      let lowQualityJobs = [];
 
-async function loadLowQuality() {
-  const tableEl = document.getElementById('low-quality-table');
-  const resultEl = document.getElementById('low-quality-result');
-  tableEl.innerHTML = '<div class="loading">조회 중...</div>';
-  resultEl.textContent = '';
+      async function loadLowQuality() {
+        const tableEl = document.getElementById("low-quality-table");
+        const resultEl = document.getElementById("low-quality-result");
+        tableEl.innerHTML = '<div class="loading">조회 중...</div>';
+        resultEl.textContent = "";
 
-  try {
-    const res = await fetch('/admin/low-quality');
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+        try {
+          const res = await adminFetch("/admin/low-quality");
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
 
-    lowQualityJobs = data.jobs;
-    renderLowQualityTable(data.jobs);
-    resultEl.textContent = `총 ${data.total}건 발견`;
-  } catch (e) {
-    tableEl.innerHTML = `<div class="error-msg">❌ ${e.message}</div>`;
-  }
-}
+          lowQualityJobs = data.jobs;
+          renderLowQualityTable(data.jobs);
+          resultEl.textContent = `총 ${data.total}건 발견`;
+        } catch (e) {
+          tableEl.innerHTML = `<div class="error-msg">❌ ${e.message}</div>`;
+        }
+      }
 
-function renderLowQualityTable(jobs) {
-  const tableEl = document.getElementById('low-quality-table');
-  const deleteBtn = document.getElementById('delete-btn');
+      function renderLowQualityTable(jobs) {
+        const tableEl = document.getElementById("low-quality-table");
+        const deleteBtn = document.getElementById("delete-btn");
 
-  if (jobs.length === 0) {
-    tableEl.innerHTML = '<div class="loading">저품질 공고가 없습니다.</div>';
-    deleteBtn.disabled = true;
-    return;
-  }
+        if (jobs.length === 0) {
+          tableEl.innerHTML =
+            '<div class="loading">저품질 공고가 없습니다.</div>';
+          deleteBtn.disabled = true;
+          return;
+        }
 
-  deleteBtn.disabled = false;
+        deleteBtn.disabled = false;
 
-  tableEl.innerHTML = `
+        tableEl.innerHTML = `
     <div class="card">
       <div class="result-count" style="margin-bottom:8px">${jobs.length}건</div>
       <div class="table-wrap">
@@ -847,124 +1039,130 @@ function renderLowQualityTable(jobs) {
     </div>
   `;
 
-  const tbody = document.getElementById('lq-tbody');
+        const tbody = document.getElementById("lq-tbody");
 
-  jobs.forEach(j => {
-    const tr = document.createElement('tr');
+        jobs.forEach((j) => {
+          const tr = document.createElement("tr");
 
-    const tdCheck = document.createElement('td');
-    tdCheck.style.width = '36px';
-    tdCheck.style.textAlign = 'center';
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.className = 'job-check';
-    check.value = j.id;
-    tdCheck.appendChild(check);
-    tr.appendChild(tdCheck);
+          const tdCheck = document.createElement("td");
+          tdCheck.style.width = "36px";
+          tdCheck.style.textAlign = "center";
+          const check = document.createElement("input");
+          check.type = "checkbox";
+          check.className = "job-check";
+          check.value = j.id;
+          tdCheck.appendChild(check);
+          tr.appendChild(tdCheck);
 
-    const tdTitle = document.createElement('td');
-    if (j.title) {
-      tdTitle.textContent = j.title;
-      tdTitle.title = j.title;
-    } else {
-      tdTitle.innerHTML = '<span style="color:#ef4444">❌ 없음</span>';
-    }
-    tr.appendChild(tdTitle);
+          const tdTitle = document.createElement("td");
+          if (j.title) {
+            tdTitle.textContent = j.title;
+            tdTitle.title = j.title;
+          } else {
+            tdTitle.innerHTML = '<span style="color:#ef4444">❌ 없음</span>';
+          }
+          tr.appendChild(tdTitle);
 
-    const tdCompany = document.createElement('td');
-    if (j.company_name) {
-      tdCompany.textContent = j.company_name;
-    } else {
-      tdCompany.innerHTML = '<span style="color:#ef4444">❌ 없음</span>';
-    }
-    tr.appendChild(tdCompany);
+          const tdCompany = document.createElement("td");
+          if (j.company_name) {
+            tdCompany.textContent = j.company_name;
+          } else {
+            tdCompany.innerHTML = '<span style="color:#ef4444">❌ 없음</span>';
+          }
+          tr.appendChild(tdCompany);
 
-    const tdSource = document.createElement('td');
-    tdSource.textContent = j.source_site_name || '';
-    tr.appendChild(tdSource);
+          const tdSource = document.createElement("td");
+          tdSource.textContent = j.source_site_name || "";
+          tr.appendChild(tdSource);
 
-    const tdDeadline = document.createElement('td');
-    if (!j.deadline) tdDeadline.className = 'empty';
-    tdDeadline.textContent = j.deadline ? j.deadline.slice(0, 10) : '❌';
-    tr.appendChild(tdDeadline);
+          const tdDeadline = document.createElement("td");
+          if (!j.deadline) tdDeadline.className = "empty";
+          tdDeadline.textContent = j.deadline ? j.deadline.slice(0, 10) : "❌";
+          tr.appendChild(tdDeadline);
 
-    const tdReasons = document.createElement('td');
-    if (j.reasons && j.reasons.length > 0) {
-      j.reasons.forEach(r => {
-        const span = document.createElement('span');
-        span.className = 'reason-tag';
-        span.textContent = r;
-        tdReasons.appendChild(span);
-        tdReasons.appendChild(document.createTextNode(' '));
-      });
-    }
-    tr.appendChild(tdReasons);
+          const tdReasons = document.createElement("td");
+          if (j.reasons && j.reasons.length > 0) {
+            j.reasons.forEach((r) => {
+              const span = document.createElement("span");
+              span.className = "reason-tag";
+              span.textContent = r;
+              tdReasons.appendChild(span);
+              tdReasons.appendChild(document.createTextNode(" "));
+            });
+          }
+          tr.appendChild(tdReasons);
 
-    const tdRelated = document.createElement('td');
-    if (j.relatedTables && j.relatedTables.length > 0) {
-      tdRelated.appendChild(document.createTextNode('⚠️ '));
-      j.relatedTables.forEach(t => {
-        const span = document.createElement('span');
-        span.className = 'warn-tag';
-        span.textContent = t;
-        tdRelated.appendChild(span);
-        tdRelated.appendChild(document.createTextNode(' '));
-      });
-    } else {
-      tdRelated.innerHTML = '<span style="color:#aaa;font-size:12px">없음</span>';
-    }
-    tr.appendChild(tdRelated);
+          const tdRelated = document.createElement("td");
+          if (j.relatedTables && j.relatedTables.length > 0) {
+            tdRelated.appendChild(document.createTextNode("⚠️ "));
+            j.relatedTables.forEach((t) => {
+              const span = document.createElement("span");
+              span.className = "warn-tag";
+              span.textContent = t;
+              tdRelated.appendChild(span);
+              tdRelated.appendChild(document.createTextNode(" "));
+            });
+          } else {
+            tdRelated.innerHTML =
+              '<span style="color:#aaa;font-size:12px">없음</span>';
+          }
+          tr.appendChild(tdRelated);
 
-    const tdUrl = document.createElement('td');
-    const a = document.createElement('a');
-    a.textContent = '링크';
-    a.target = '_blank';
-    let safeUrl = j.source_url || '#';
-    try {
-      const parsed = new URL(safeUrl);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        safeUrl = '#'; // deny javascript: or data: etc
+          const tdUrl = document.createElement("td");
+          const a = document.createElement("a");
+          a.textContent = "링크";
+          a.target = "_blank";
+          let safeUrl = j.source_url || "#";
+          try {
+            const parsed = new URL(safeUrl);
+            if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+              safeUrl = "#"; // deny javascript: or data: etc
+            }
+          } catch (e) {
+            safeUrl = "#"; // deny invalid URL syntax
+          }
+          a.href = safeUrl;
+          tdUrl.appendChild(a);
+          tr.appendChild(tdUrl);
+
+          tbody.appendChild(tr);
+        });
       }
-    } catch(e) {
-      safeUrl = '#'; // deny invalid URL syntax
-    }
-    a.href = safeUrl;
-    tdUrl.appendChild(a);
-    tr.appendChild(tdUrl);
 
-    tbody.appendChild(tr);
-  });
-}
+      function toggleAll(checkbox) {
+        document
+          .querySelectorAll(".job-check")
+          .forEach((c) => (c.checked = checkbox.checked));
+      }
 
-function toggleAll(checkbox) {
-  document.querySelectorAll('.job-check').forEach(c => c.checked = checkbox.checked);
-}
+      async function deleteSelected() {
+        const checked = [
+          ...document.querySelectorAll(".job-check:checked"),
+        ].map((c) => c.value);
+        if (checked.length === 0) return alert("삭제할 공고를 선택해주세요.");
 
-async function deleteSelected() {
-  const checked = [...document.querySelectorAll('.job-check:checked')].map(c => c.value);
-  if (checked.length === 0) return alert('삭제할 공고를 선택해주세요.');
+        if (!confirm(`선택한 ${checked.length}건을 삭제할까요?`)) return;
 
-  if (!confirm(`선택한 ${checked.length}건을 삭제할까요?`)) return;
+        const resultEl = document.getElementById("low-quality-result");
+        resultEl.textContent = "삭제 중...";
 
-  const resultEl = document.getElementById('low-quality-result');
-  resultEl.textContent = '삭제 중...';
+        try {
+          const res = await adminFetch("/admin/delete-jobs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: checked }),
+          });
 
-  try {
-    const res = await fetch('/admin/delete-jobs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: checked }),
-    });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-
-    resultEl.textContent = data.message || `✅ ${data.deleted}건 삭제 완료`;
-    await loadLowQuality();
-  } catch (e) {
-    resultEl.textContent = `❌ 삭제 실패: ${e.message}`;
-  }
-}
-</script>
-</body>
+          resultEl.textContent =
+            data.message || `✅ ${data.deleted}건 삭제 완료`;
+          await loadLowQuality();
+        } catch (e) {
+          resultEl.textContent = `❌ 삭제 실패: ${e.message}`;
+        }
+      }
+    </script>
+  </body>
 </html>

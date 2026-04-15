@@ -47,11 +47,11 @@ const fetchWantedDetail = async (jobId: number, buildId: string, retry = true): 
     const data = res.data?.pageProps?.initialData;
     if (!data) return null;
 
-    const { requirements, preferred_points, company, career, confirm_time, close_time, due_time, address } = data;
+    const { requirements, preferred_points, company, career, close_time, due_time, address } = data;
 
     return {
       experience: formatCareer(career),
-      deadline: close_time || due_time || confirm_time || "",
+      deadline: close_time || due_time || "상시모집",
       companyLogo: company?.logo_image || "",
       requirements: requirements || "",
       preferred: preferred_points || "",

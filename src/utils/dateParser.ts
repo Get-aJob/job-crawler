@@ -5,9 +5,11 @@ export const parseDeadline = (raw: string): string | null => {
     const cleaned = raw.replace(/\s/g, "");
 
     // ISO 8601 형식: "2025-11-20T..." 또는 "2025-11-20"
+    // 날짜 부분만 추출해 UTC 기준으로 파싱 (타임존 없는 datetime의 로컬 파싱 방지)
     const isoMatch = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (isoMatch) {
-      const date = new Date(cleaned);
+      const dateOnly = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+      const date = new Date(dateOnly);
       if (!isNaN(date.getTime())) return date.toISOString();
     }
 

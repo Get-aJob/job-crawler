@@ -11,7 +11,14 @@ export const parseDeadline = (raw: string): string | null => {
       if (!isNaN(date.getTime())) return date.toISOString();
     }
 
-    // MM.DD 또는 MM/DD 형식
+    // YYYY.MM.DD 또는 YYYY/MM/DD 형식 (인크루트 등)
+    const fullDotMatch = cleaned.match(/(\d{4})[./](\d{2})[./](\d{2})/);
+    if (fullDotMatch) {
+      const date = new Date(`${fullDotMatch[1]}-${fullDotMatch[2]}-${fullDotMatch[3]}`);
+      if (!isNaN(date.getTime())) return date.toISOString();
+    }
+
+    // MM.DD 또는 MM/DD 형식 (사람인 등)
     const shortMatch = cleaned.match(/(\d{2})[./](\d{2})/);
     if (shortMatch) {
       const month = shortMatch[1];
